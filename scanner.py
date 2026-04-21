@@ -11,7 +11,7 @@ from sqlalchemy import select
 
 from database import db_session
 from detection import deduplicate_records, is_phone_device, normalize_hostname, normalize_mac
-from models import Alert, Device, DeviceIP
+from models import Alert, ConnectionLog, Device, DeviceIP
 
 logger = logging.getLogger(__name__)
 
@@ -114,6 +114,7 @@ def _create_alert(mac: str, alert_type: str, message: str) -> Alert:
 def process_scan_results(records: list[dict[str, Any]]) -> None:
     now = datetime.now(timezone.utc)
     with db_session() as session:
+        was_offline = {d.mac_address: d.is_offline for d in session.scalars(select(Device)).all()}
         for rec in records:
             sources = rec.get("sources", [])
             primary_vlan = rec.get("vlan", rec.get("dhcp_server"))
@@ -135,6 +136,17 @@ def process_scan_results(records: list[dict[str, Any]]) -> None:
                 )
                 device.refresh_offline_status()
                 session.add(device)
+                session.add(
+                    ConnectionLog(
+                        mac_address=mac,
+                        event_type="connected",
+                        ip_address=rec["ip_address"],
+                        vlan=primary_vlan,
+                        router_ip=rec["router_ip"],
+                        hostname=hostname,
+                        timestamp=now,
+                    )
+                )
                 session.flush()
                 session.add(
                     DeviceIP(
@@ -177,6 +189,18 @@ def process_scan_results(records: list[dict[str, Any]]) -> None:
             existing.is_phone = existing.is_phone or is_phone_device(hostname, vendor)
             existing.is_trusted = existing.seen_count > 20
             existing.refresh_offline_status()
+            if was_offline.get(mac, False) and not existing.is_offline:
+                session.add(
+                    ConnectionLog(
+                        mac_address=mac,
+                        event_type="connected",
+                        ip_address=rec["ip_address"],
+                        vlan=primary_vlan,
+                        router_ip=rec["router_ip"],
+                        hostname=existing.hostname,
+                        timestamp=now,
+                    )
+                )
 
             existing_ip_signatures = {
                 (ip_row.ip_address, ip_row.vlan, ip_row.router_ip)
@@ -199,6 +223,28 @@ def process_scan_results(records: list[dict[str, Any]]) -> None:
                     )
                 )
                 existing_ip_signatures.add((rec["ip_address"], primary_vlan, rec["router_ip"]))
+                if (
+                    latest_ip is not None
+                    and (
+                        latest_ip.ip_address != rec["ip_address"]
+                        or latest_ip.vlan != primary_vlan
+                        or latest_ip.router_ip != rec["router_ip"]
+                    )
+                ):
+                    session.add(
+                        ConnectionLog(
+                            mac_address=mac,
+                            event_type="network_change",
+                            ip_address=rec["ip_address"],
+                            vlan=primary_vlan,
+                            router_ip=rec["router_ip"],
+                            old_ip=latest_ip.ip_address,
+                            old_vlan=latest_ip.vlan,
+                            old_router_ip=latest_ip.router_ip,
+                            hostname=existing.hostname,
+                            timestamp=now,
+                        )
+                    )
 
             for source in sources[1:]:
                 source_vlan = source.get("vlan", source.get("dhcp_server"))
@@ -219,6 +265,20 @@ def process_scan_results(records: list[dict[str, Any]]) -> None:
         devices = session.scalars(select(Device)).all()
         for device in devices:
             device.refresh_offline_status()
+        for device in devices:
+            if not was_offline.get(device.mac_address, True) and device.is_offline:
+                latest_ip = device.ips[0] if device.ips else None
+                session.add(
+                    ConnectionLog(
+                        mac_address=device.mac_address,
+                        event_type="disconnected",
+                        ip_address=latest_ip.ip_address if latest_ip else None,
+                        vlan=latest_ip.vlan if latest_ip else None,
+                        router_ip=latest_ip.router_ip if latest_ip else None,
+                        hostname=device.hostname,
+                        timestamp=now,
+                    )
+                )
 
 
 async def scan_once(scanner: MikroTikScanner) -> None:
