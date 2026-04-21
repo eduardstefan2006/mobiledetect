@@ -40,6 +40,7 @@ class MikroTikScanner:
             port=8728,
             plaintext_login=True,
             use_ssl=False,
+            encoding="latin-1",
         )
         api = pool.get_api()
 
