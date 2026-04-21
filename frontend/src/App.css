@@ -363,6 +363,12 @@ tbody tr:hover {
   background: rgba(245, 158, 11, 0.2);
 }
 
+.badge.info {
+  color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.45);
+  background: rgba(59, 130, 246, 0.2);
+}
+
 .location-badge {
   display: inline-flex;
   align-items: center;

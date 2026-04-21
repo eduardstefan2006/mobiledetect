@@ -5,6 +5,7 @@ import Dashboard from './components/Dashboard';
 import Devices from './components/Devices';
 import Alerts from './components/Alerts';
 import Locations from './components/Locations';
+import Logs from './components/Logs';
 import DeviceModal from './components/DeviceModal';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
@@ -22,6 +23,7 @@ const PAGE_TITLES = {
   devices: 'Dispozitive',
   alerts: 'Alerte',
   locations: 'Locații',
+  logs: 'Loguri',
 };
 
 const toArray = (value) => (Array.isArray(value) ? value : []);
@@ -192,6 +194,9 @@ function App() {
               loading={isInitialLoading}
               formatRelativeTime={formatRelativeTime}
             />
+          )}
+          {activePage === 'logs' && (
+            <Logs API_URL={API_URL} />
           )}
         </main>
       </div>

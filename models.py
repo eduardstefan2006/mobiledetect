@@ -73,3 +73,24 @@ class Alert(Base):
         index=True,
     )
     is_resolved: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+
+class ConnectionLog(Base):
+    __tablename__ = "connection_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    mac_address: Mapped[str] = mapped_column(String(32), index=True, nullable=False)
+    event_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    ip_address: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    vlan: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    router_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    old_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    old_vlan: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    old_router_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    hostname: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        index=True,
+    )

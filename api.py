@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from database import get_db
-from models import Alert, Device
+from models import Alert, ConnectionLog, Device
 
 router = APIRouter()
 
@@ -92,4 +94,35 @@ def get_alerts(db: Session = Depends(get_db)) -> list[dict]:
             "is_resolved": alert.is_resolved,
         }
         for alert in alerts
+    ]
+
+
+@router.get("/logs")
+def get_connection_logs(
+    mac: Optional[str] = None,
+    event_type: Optional[str] = None,
+    limit: int = 200,
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    query = select(ConnectionLog).order_by(ConnectionLog.timestamp.desc()).limit(limit)
+    if mac:
+        query = query.where(ConnectionLog.mac_address == mac.lower())
+    if event_type:
+        query = query.where(ConnectionLog.event_type == event_type)
+    logs = db.scalars(query).all()
+    return [
+        {
+            "id": log.id,
+            "mac_address": log.mac_address,
+            "event_type": log.event_type,
+            "ip_address": log.ip_address,
+            "vlan": log.vlan,
+            "router_ip": log.router_ip,
+            "old_ip": log.old_ip,
+            "old_vlan": log.old_vlan,
+            "old_router_ip": log.old_router_ip,
+            "hostname": log.hostname,
+            "timestamp": log.timestamp,
+        }
+        for log in logs
     ]

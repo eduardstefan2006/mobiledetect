@@ -5,6 +5,7 @@ const items = [
   { key: 'devices', label: '📱 Dispozitive' },
   { key: 'alerts', label: '🔔 Alerte' },
   { key: 'locations', label: '🗺️ Locații' },
+  { key: 'logs', label: '📋 Loguri' },
 ];
 
 function Sidebar({ activePage, onNavigate, unresolvedAlerts }) {
