@@ -1,167 +1,208 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import './App.css';
+import Sidebar from './components/Sidebar';
+import Dashboard from './components/Dashboard';
+import Devices from './components/Devices';
+import Alerts from './components/Alerts';
+import Locations from './components/Locations';
+import DeviceModal from './components/DeviceModal';
 
-const ROUTER_NAMES = {
-  '192.168.1.1': 'Școala 1',
-  '192.168.2.1': 'Școala 2',
-  '192.168.3.1': 'Școala 3',
-  '192.168.4.1': 'Școala 4',
-  '192.168.5.1': 'Grădinița 3',
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+
+export const LOCATIONS = {
+  '192.168.1.1': { name: 'Școala 1', color: '#3b82f6' },
+  '192.168.2.1': { name: 'Școala 2', color: '#10b981' },
+  '192.168.3.1': { name: 'Școala 3', color: '#f59e0b' },
+  '192.168.4.1': { name: 'Școala 4', color: '#8b5cf6' },
+  '192.168.5.1': { name: 'Grădinița 3', color: '#ec4899' },
+};
+
+const PAGE_TITLES = {
+  dashboard: 'Dashboard',
+  devices: 'Dispozitive',
+  alerts: 'Alerte',
+  locations: 'Locații',
+};
+
+const toArray = (value) => (Array.isArray(value) ? value : []);
+
+export const formatRelativeTime = (value) => {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  const diffSec = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
+
+  if (diffSec < 5) return 'acum';
+  if (diffSec < 60) return `acum ${diffSec}s`;
+
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `acum ${diffMin} min`;
+
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return `acum ${diffHours}h`;
+
+  return `acum ${Math.floor(diffHours / 24)}z`;
 };
 
 function App() {
-  const [tab, setTab] = useState('devices');
+  const [activePage, setActivePage] = useState('dashboard');
   const [devices, setDevices] = useState([]);
   const [alerts, setAlerts] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshIn, setRefreshIn] = useState(30);
+  const [selectedMac, setSelectedMac] = useState(null);
 
   const fetchData = useCallback(async () => {
-    setLoading(true);
+    setIsRefreshing(true);
     try {
-      const [devicesRes, alertsRes] = await Promise.all([
+      const [devicesResponse, alertsResponse] = await Promise.all([
         fetch(`${API_URL}/devices`),
         fetch(`${API_URL}/alerts`),
       ]);
       const [devicesData, alertsData] = await Promise.all([
-        devicesRes.json(),
-        alertsRes.json(),
+        devicesResponse.ok ? devicesResponse.json() : [],
+        alertsResponse.ok ? alertsResponse.json() : [],
       ]);
-      setDevices(Array.isArray(devicesData) ? devicesData : []);
-      setAlerts(Array.isArray(alertsData) ? alertsData : []);
-    } catch (err) {
-      console.error('Error fetching data:', err);
+      setDevices(toArray(devicesData));
+      setAlerts(toArray(alertsData));
+    } catch (error) {
+      console.error('Failed to fetch monitoring data', error);
+      setDevices([]);
+      setAlerts([]);
+    } finally {
+      setIsInitialLoading(false);
+      setIsRefreshing(false);
+      setRefreshIn(30);
     }
-    setLoading(false);
-  }, [API_URL]);
+  }, []);
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
+    const refreshInterval = setInterval(fetchData, 30000);
+    return () => clearInterval(refreshInterval);
   }, [fetchData]);
 
-  const locationStats = useMemo(() => {
-    const counts = Object.keys(ROUTER_NAMES).reduce((acc, ip) => ({ ...acc, [ip]: 0 }), {});
-    devices.forEach((device) => {
-      const routerIp = device.latest_network?.router_ip;
-      if (routerIp && !device.is_offline) {
-        counts[routerIp] = (counts[routerIp] || 0) + 1;
-      }
-    });
-    return counts;
-  }, [devices]);
+  useEffect(() => {
+    const countdownInterval = setInterval(() => {
+      setRefreshIn((previous) => (previous <= 1 ? 30 : previous - 1));
+    }, 1000);
+    return () => clearInterval(countdownInterval);
+  }, []);
 
   const unresolvedAlerts = useMemo(
     () => alerts.filter((alert) => !alert.is_resolved),
     [alerts],
   );
 
-  const formatDate = (value) => (value ? new Date(value).toLocaleString('ro-RO') : '-');
-  const locationName = (routerIp) => ROUTER_NAMES[routerIp] || routerIp || '-';
+  const totals = useMemo(() => {
+    const online = devices.filter((device) => !device.is_offline).length;
+    const phones = devices.filter((device) => device.is_phone).length;
+    return {
+      total: devices.length,
+      online,
+      phones,
+      alerts: unresolvedAlerts.length,
+    };
+  }, [devices, unresolvedAlerts.length]);
+
+  const locationSummaries = useMemo(() => {
+    return Object.entries(LOCATIONS).map(([routerIp, meta]) => {
+      const locationDevices = devices.filter((device) => device.latest_network?.router_ip === routerIp);
+      const online = locationDevices.filter((device) => !device.is_offline).length;
+      const phones = locationDevices.filter((device) => device.is_phone).length;
+      const latestSeen = locationDevices
+        .map((device) => device.last_seen)
+        .filter(Boolean)
+        .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] || null;
+
+      return {
+        routerIp,
+        ...meta,
+        total: locationDevices.length,
+        online,
+        phones,
+        latestSeen,
+      };
+    });
+  }, [devices]);
+
+  const recentActivity = useMemo(() => {
+    return [...devices]
+      .sort((a, b) => new Date(b.last_seen || 0).getTime() - new Date(a.last_seen || 0).getTime())
+      .slice(0, 10);
+  }, [devices]);
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <h1>Network Monitor</h1>
-        <p>{loading ? 'Actualizare...' : `Dispozitive: ${devices.length} | Alerte: ${alerts.length}`}</p>
-      </header>
+    <div className="app-shell">
+      <Sidebar
+        activePage={activePage}
+        onNavigate={setActivePage}
+        unresolvedAlerts={unresolvedAlerts.length}
+      />
+      <div className="app-content">
+        <header className="top-header">
+          <div>
+            <h1>{PAGE_TITLES[activePage]}</h1>
+            <div className="live-row">
+              <span className="live-dot" />
+              <span className="live-label">LIVE</span>
+              <span className="refresh-counter">Refresh în {refreshIn}s</span>
+            </div>
+          </div>
+          <div className="header-right">
+            <div className="counter-grid">
+              <span>Total: {totals.total}</span>
+              <span>Online: {totals.online}</span>
+              <span>Telefoane: {totals.phones}</span>
+              <span>Alerte noi: {totals.alerts}</span>
+            </div>
+            <button className="refresh-button" onClick={fetchData} disabled={isRefreshing}>
+              {isRefreshing ? 'Actualizare...' : 'Refresh'}
+            </button>
+          </div>
+        </header>
 
-      <main className="app-main">
-        <div className="tabs">
-          <button className={tab === 'devices' ? 'tab active' : 'tab'} onClick={() => setTab('devices')}>Dispozitive</button>
-          <button className={tab === 'alerts' ? 'tab active' : 'tab'} onClick={() => setTab('alerts')}>Alerte</button>
-          <button className={tab === 'stats' ? 'tab active' : 'tab'} onClick={() => setTab('stats')}>Statistici</button>
-        </div>
-
-        {tab === 'devices' && (
-          <section className="panel">
-            <table>
-              <thead>
-                <tr>
-                  <th>MAC Address</th>
-                  <th>Hostname</th>
-                  <th>IP curent</th>
-                  <th>Locație</th>
-                  <th>VLAN (dhcp_server)</th>
-                  <th>Tip</th>
-                  <th>Status</th>
-                  <th>De încredere</th>
-                  <th>Văzut de ori</th>
-                  <th>Ultima dată văzut</th>
-                </tr>
-              </thead>
-              <tbody>
-                {devices.map((device) => (
-                  <tr key={device.mac_address}>
-                    <td>{device.mac_address}</td>
-                    <td>{device.hostname || '-'}</td>
-                    <td>{device.latest_network?.ip_address || '-'}</td>
-                    <td>{locationName(device.latest_network?.router_ip)}</td>
-                    <td>{device.latest_network?.vlan || '-'}</td>
-                    <td>{device.is_phone ? '📱 Telefon' : '💻 Alt dispozitiv'}</td>
-                    <td>
-                      <span className={device.is_offline ? 'badge badge-offline' : 'badge badge-online'}>
-                        {device.is_offline ? '🔴 Offline' : '🟢 Online'}
-                      </span>
-                    </td>
-                    <td>{device.is_trusted ? '✅' : '❌'}</td>
-                    <td>{device.seen_count || 0}</td>
-                    <td>{formatDate(device.last_seen)}</td>
-                  </tr>
-                ))}
-                {!devices.length && (
-                  <tr>
-                    <td colSpan="10" className="empty">Nu există dispozitive.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </section>
-        )}
-
-        {tab === 'alerts' && (
-          <section className="panel">
-            <table>
-              <thead>
-                <tr>
-                  <th>MAC Address</th>
-                  <th>Tip alertă</th>
-                  <th>Mesaj</th>
-                  <th>Data</th>
-                </tr>
-              </thead>
-              <tbody>
-                {unresolvedAlerts.map((alert) => (
-                    <tr key={alert.id}>
-                      <td>{alert.mac_address}</td>
-                      <td>{alert.alert_type}</td>
-                      <td>{alert.message}</td>
-                      <td>{formatDate(alert.created_at)}</td>
-                    </tr>
-                  ))}
-                {!unresolvedAlerts.length && (
-                  <tr>
-                    <td colSpan="4" className="empty">Nu există alerte active.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </section>
-        )}
-
-        {tab === 'stats' && (
-          <section className="panel stats-grid">
-            {Object.entries(ROUTER_NAMES).map(([routerIp, name]) => (
-              <article key={routerIp} className="stat-card">
-                <h3>{name}</h3>
-                <p>{locationStats[routerIp] || 0} dispozitive</p>
-              </article>
-            ))}
-          </section>
-        )}
-      </main>
+        <main className="page-area">
+          {activePage === 'dashboard' && (
+            <Dashboard
+              locationSummaries={locationSummaries}
+              devices={devices}
+              recentActivity={recentActivity}
+              loading={isInitialLoading}
+              formatRelativeTime={formatRelativeTime}
+              locations={LOCATIONS}
+            />
+          )}
+          {activePage === 'devices' && (
+            <Devices
+              devices={devices}
+              loading={isInitialLoading}
+              formatRelativeTime={formatRelativeTime}
+              locations={LOCATIONS}
+              onSelectDevice={setSelectedMac}
+            />
+          )}
+          {activePage === 'alerts' && (
+            <Alerts alerts={alerts} loading={isInitialLoading} formatRelativeTime={formatRelativeTime} />
+          )}
+          {activePage === 'locations' && (
+            <Locations
+              locationSummaries={locationSummaries}
+              loading={isInitialLoading}
+              formatRelativeTime={formatRelativeTime}
+            />
+          )}
+        </main>
+      </div>
+      <DeviceModal
+        macAddress={selectedMac}
+        isOpen={Boolean(selectedMac)}
+        onClose={() => setSelectedMac(null)}
+        apiUrl={API_URL}
+        formatRelativeTime={formatRelativeTime}
+        locations={LOCATIONS}
+      />
     </div>
   );
 }
