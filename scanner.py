@@ -94,6 +94,8 @@ def process_scan_results(records: list[dict[str, Any]]) -> None:
     now = datetime.now(timezone.utc)
     with db_session() as session:
         for rec in records:
+            sources = rec.get("sources", [])
+            primary_vlan = rec.get("vlan", rec.get("dhcp_server"))
             mac = rec["mac_address"]
             hostname = rec.get("hostname")
             vendor = rec.get("vendor")
@@ -117,11 +119,27 @@ def process_scan_results(records: list[dict[str, Any]]) -> None:
                     DeviceIP(
                         device_id=device.id,
                         ip_address=rec["ip_address"],
-                        vlan=rec.get("dhcp_server"),
+                        vlan=primary_vlan,
                         router_ip=rec["router_ip"],
                         timestamp=now,
                     )
                 )
+                inserted_signatures = {(rec["ip_address"], primary_vlan, rec["router_ip"])}
+                for source in sources[1:]:
+                    source_vlan = source.get("vlan", source.get("dhcp_server"))
+                    signature = (source["ip_address"], source_vlan, source["router_ip"])
+                    if signature in inserted_signatures:
+                        continue
+                    session.add(
+                        DeviceIP(
+                            device_id=device.id,
+                            ip_address=source["ip_address"],
+                            vlan=source_vlan,
+                            router_ip=source["router_ip"],
+                            timestamp=now,
+                        )
+                    )
+                    inserted_signatures.add(signature)
                 session.add(
                     _create_alert(
                         mac,
@@ -139,22 +157,43 @@ def process_scan_results(records: list[dict[str, Any]]) -> None:
             existing.is_trusted = existing.seen_count > 20
             existing.refresh_offline_status()
 
+            existing_ip_signatures = {
+                (ip_row.ip_address, ip_row.vlan, ip_row.router_ip)
+                for ip_row in existing.ips
+            }
             latest_ip = existing.ips[0] if existing.ips else None
             if (
                 latest_ip is None
                 or latest_ip.ip_address != rec["ip_address"]
-                or latest_ip.vlan != rec.get("dhcp_server")
+                or latest_ip.vlan != primary_vlan
                 or latest_ip.router_ip != rec["router_ip"]
             ):
                 session.add(
                     DeviceIP(
                         device_id=existing.id,
                         ip_address=rec["ip_address"],
-                        vlan=rec.get("dhcp_server"),
+                        vlan=primary_vlan,
                         router_ip=rec["router_ip"],
                         timestamp=now,
                     )
                 )
+                existing_ip_signatures.add((rec["ip_address"], primary_vlan, rec["router_ip"]))
+
+            for source in sources[1:]:
+                source_vlan = source.get("vlan", source.get("dhcp_server"))
+                signature = (source["ip_address"], source_vlan, source["router_ip"])
+                if signature in existing_ip_signatures:
+                    continue
+                session.add(
+                    DeviceIP(
+                        device_id=existing.id,
+                        ip_address=source["ip_address"],
+                        vlan=source_vlan,
+                        router_ip=source["router_ip"],
+                        timestamp=now,
+                    )
+                )
+                existing_ip_signatures.add(signature)
 
         devices = session.scalars(select(Device)).all()
         for device in devices:
