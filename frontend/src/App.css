@@ -1,63 +1,127 @@
-.App {
-  text-align: center;
+body {
+  margin: 0;
+  background: #10131a;
+  color: #e6e8ef;
+  font-family: Inter, Segoe UI, Arial, sans-serif;
 }
 
-.App-header {
-  background-color: #282c34;
-  padding: 20px;
-  color: white;
+.app {
+  min-height: 100vh;
 }
 
-.App-header h1 {
-  margin: 0 0 20px 0;
+.app-header {
+  padding: 24px 28px;
+  border-bottom: 1px solid #2a3140;
 }
 
-.App-header button {
-  padding: 10px 20px;
-  font-size: 16px;
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  border-radius: 4px;
+.app-header h1 {
+  margin: 0;
+}
+
+.app-header p {
+  margin: 8px 0 0;
+  color: #a6b0c3;
+}
+
+.app-main {
+  padding: 20px 28px 28px;
+}
+
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.tab {
+  background: #1b2230;
+  color: #e6e8ef;
+  border: 1px solid #2f3a4d;
+  border-radius: 8px;
+  padding: 8px 14px;
   cursor: pointer;
 }
 
-.App-header button:hover:not(:disabled) {
-  background-color: #45a049;
+.tab.active {
+  background: #2c6cf6;
+  border-color: #2c6cf6;
 }
 
-.App-header button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-}
-
-main {
-  padding: 20px;
-}
-
-.devices-list {
-  max-width: 1200px;
-  margin: 0 auto;
+.panel {
+  background: #171e2a;
+  border: 1px solid #2a3140;
+  border-radius: 10px;
+  padding: 14px;
+  overflow-x: auto;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 20px;
 }
 
-table th,
-table td {
-  border: 1px solid #ddd;
-  padding: 12px;
+th,
+td {
   text-align: left;
+  padding: 10px 8px;
+  border-bottom: 1px solid #293143;
 }
 
-table th {
-  background-color: #f2f2f2;
-  font-weight: bold;
+thead th {
+  color: #b9c2d3;
 }
 
-table tr:hover {
-  background-color: #f5f5f5;
+tbody tr:nth-child(odd) {
+  background: #151c28;
+}
+
+tbody tr:nth-child(even) {
+  background: #111722;
+}
+
+.badge {
+  display: inline-block;
+  border-radius: 14px;
+  font-size: 12px;
+  padding: 4px 8px;
+  font-weight: 600;
+}
+
+.badge-online {
+  background: #0d3924;
+  color: #5de5a5;
+}
+
+.badge-offline {
+  background: #402026;
+  color: #ff9ba7;
+}
+
+.stats-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+.stat-card {
+  border: 1px solid #2f3a4d;
+  border-radius: 8px;
+  padding: 14px;
+  background: #111722;
+}
+
+.stat-card h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.stat-card p {
+  margin: 0;
+  color: #8eb7ff;
+  font-weight: 700;
+}
+
+.empty {
+  text-align: center;
+  color: #97a2b8;
 }
