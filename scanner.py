@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 import routeros_api
+import routeros_api.api_structure as _api_structure
 from sqlalchemy import select
 
 from database import db_session
@@ -13,6 +14,22 @@ from detection import deduplicate_records, is_phone_device, normalize_hostname, 
 from models import Alert, Device, DeviceIP
 
 logger = logging.getLogger(__name__)
+
+# Monkey-patch: MikroTik routers may send hostnames encoded in latin-1 instead of UTF-8.
+# routeros_api 0.17.0 does not expose an encoding parameter, so we patch StringField here.
+_orig_get_python_value = _api_structure.StringField.get_python_value
+
+
+def _safe_get_python_value(self, value: bytes) -> str:
+    try:
+        return _orig_get_python_value(self, value)
+    except UnicodeDecodeError:
+        if isinstance(value, (bytes, bytearray)):
+            return value.decode("latin-1")
+        return str(value)
+
+
+_api_structure.StringField.get_python_value = _safe_get_python_value
 
 ROUTERS = [
     "192.168.1.1",
@@ -40,7 +57,6 @@ class MikroTikScanner:
             port=8728,
             plaintext_login=True,
             use_ssl=False,
-            encoding="latin-1",
         )
         api = pool.get_api()
 
@@ -201,12 +217,12 @@ def process_scan_results(records: list[dict[str, Any]]) -> None:
             device.refresh_offline_status()
 
 
-async def scan_once(scanner: MikroTikScanner) -> None:
+aSync def scan_once(scanner: MikroTikScanner) -> None:
     results = await scanner.collect_all()
     process_scan_results(results)
 
 
-async def scanner_loop() -> None:
+aSync def scanner_loop() -> None:
     scanner = MikroTikScanner()
     while True:
         try:
