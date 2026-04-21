@@ -36,6 +36,12 @@ ROUTERS = [
     "192.168.4.1",
     "192.168.5.1",
 ]
+# Router to location mapping:
+# 192.168.1.1 -> Școala 1
+# 192.168.2.1 -> Școala 2
+# 192.168.3.1 -> Școala 3
+# 192.168.4.1 -> Școala 4
+# 192.168.5.1 -> Grădinița 3
 
 ROUTER_USERNAME = "openclaw"
 ROUTER_PASSWORD = "Liesti2026"
