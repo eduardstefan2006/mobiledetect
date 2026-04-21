@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { formatTimestamp } from '../utils';
 
-function DeviceModal({ macAddress, isOpen, onClose, apiUrl, formatRelativeTime, locations }) {
+function DeviceModal({ macAddress, isOpen, onClose, apiUrl, locations }) {
   const [device, setDevice] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -70,8 +71,8 @@ function DeviceModal({ macAddress, isOpen, onClose, apiUrl, formatRelativeTime, 
               <p><strong>Status:</strong> {device.is_offline ? 'Offline' : 'Online'}</p>
               <p><strong>Tip:</strong> {device.is_phone ? 'Telefon' : 'Alt dispozitiv'}</p>
               <p><strong>De încredere:</strong> {device.is_trusted ? 'Da' : 'Nu'}</p>
-              <p><strong>Prima apariție:</strong> {formatRelativeTime(device.first_seen)}</p>
-              <p><strong>Ultima apariție:</strong> {formatRelativeTime(device.last_seen)}</p>
+              <p><strong>Prima apariție:</strong> {formatTimestamp(device.first_seen)}</p>
+              <p><strong>Ultima apariție:</strong> {formatTimestamp(device.last_seen)}</p>
               <p><strong>Seen count:</strong> {device.seen_count || 0}</p>
             </div>
 
@@ -92,7 +93,7 @@ function DeviceModal({ macAddress, isOpen, onClose, apiUrl, formatRelativeTime, 
                       <td>{entry.ip_address || '-'}</td>
                       <td>{entry.vlan || '-'}</td>
                       <td>{locations[entry.router_ip]?.name || entry.router_ip || '-'}</td>
-                      <td>{formatRelativeTime(entry.timestamp)}</td>
+                      <td>{formatTimestamp(entry.timestamp)}</td>
                     </tr>
                   ))}
                   {!history.length && (

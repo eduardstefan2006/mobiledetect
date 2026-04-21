@@ -1,6 +1,7 @@
 import React from 'react';
+import { formatTimestamp } from '../utils';
 
-function Locations({ locationSummaries, loading, formatRelativeTime }) {
+function Locations({ locationSummaries, loading }) {
   if (loading) {
     return (
       <div className="location-card-grid">
@@ -23,7 +24,7 @@ function Locations({ locationSummaries, loading, formatRelativeTime }) {
             <li>Total dispozitive: <strong>{location.total}</strong></li>
             <li>Online acum: <strong>{location.online}</strong></li>
             <li>Telefoane detectate: <strong>{location.phones}</strong></li>
-            <li>Ultimul scan: <strong>{location.latestSeen ? formatRelativeTime(location.latestSeen) : '-'}</strong></li>
+            <li>Ultimul scan: <strong>{location.latestSeen ? formatTimestamp(location.latestSeen) : '-'}</strong></li>
           </ul>
         </article>
       ))}
