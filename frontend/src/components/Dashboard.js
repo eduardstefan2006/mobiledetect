@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { formatTimestamp } from '../utils';
 import {
   Bar,
   BarChart,
@@ -13,7 +14,7 @@ import {
   YAxis,
 } from 'recharts';
 
-function Dashboard({ locationSummaries, devices, recentActivity, loading, formatRelativeTime, locations }) {
+function Dashboard({ locationSummaries, devices, recentActivity, loading, locations }) {
   const barData = useMemo(
     () =>
       locationSummaries.map((item) => ({
@@ -116,7 +117,7 @@ function Dashboard({ locationSummaries, devices, recentActivity, loading, format
                   <td>{device.hostname || device.vendor || '-'}</td>
                   <td>{device.latest_network?.ip_address || '-'}</td>
                   <td>{locations[device.latest_network?.router_ip]?.name || '-'}</td>
-                  <td>{formatRelativeTime(device.last_seen)}</td>
+                  <td>{formatTimestamp(device.last_seen)}</td>
                 </tr>
               ))}
               {recentActivity.length === 0 && (

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { formatTimestamp } from '../utils';
 
 const ROUTER_LOCATIONS = {
   '192.168.1.1': 'Școala 1',
@@ -19,20 +20,6 @@ const EVENT_META = {
   connected: { label: 'connected', className: 'success' },
   disconnected: { label: 'disconnected', className: 'danger' },
   network_change: { label: 'network_change', className: 'info' },
-};
-
-const formatRelativeTime = (value) => {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '-';
-  const diffSec = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
-  if (diffSec < 5) return 'acum';
-  if (diffSec < 60) return `acum ${diffSec}s`;
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `acum ${diffMin} min`;
-  const diffHours = Math.floor(diffMin / 60);
-  if (diffHours < 24) return `acum ${diffHours}h`;
-  return `acum ${Math.floor(diffHours / 24)}z`;
 };
 
 function Logs({ API_URL }) {
@@ -146,7 +133,7 @@ function Logs({ API_URL }) {
                       <td>{location}</td>
                       <td>{ipValue}</td>
                       <td>{log.vlan || '-'}</td>
-                      <td>{formatRelativeTime(log.timestamp)}</td>
+                      <td>{formatTimestamp(log.timestamp)}</td>
                     </tr>
                   );
                 })

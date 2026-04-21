@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
+import { formatTimestamp } from '../utils';
 
-function Alerts({ alerts, loading, formatRelativeTime }) {
+function Alerts({ alerts, loading }) {
   const sortedAlerts = useMemo(
     () => [...alerts].sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()),
     [alerts],
@@ -30,7 +31,7 @@ function Alerts({ alerts, loading, formatRelativeTime }) {
         <article key={alert.id} className="card alert-item">
           <div className="alert-item-top">
             <span className={alert.alert_type === 'new_device' ? 'badge warning' : 'badge'}>{alert.alert_type}</span>
-            <span className="muted">{formatRelativeTime(alert.created_at)}</span>
+            <span className="muted">{formatTimestamp(alert.created_at)}</span>
           </div>
           <h4>{alert.mac_address}</h4>
           <p>{alert.message}</p>

@@ -7,6 +7,7 @@ import Alerts from './components/Alerts';
 import Locations from './components/Locations';
 import Logs from './components/Logs';
 import DeviceModal from './components/DeviceModal';
+import { formatTimestamp } from './utils';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
@@ -28,23 +29,7 @@ const PAGE_TITLES = {
 
 const toArray = (value) => (Array.isArray(value) ? value : []);
 
-export const formatRelativeTime = (value) => {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '-';
-  const diffSec = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
-
-  if (diffSec < 5) return 'acum';
-  if (diffSec < 60) return `acum ${diffSec}s`;
-
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `acum ${diffMin} min`;
-
-  const diffHours = Math.floor(diffMin / 60);
-  if (diffHours < 24) return `acum ${diffHours}h`;
-
-  return `acum ${Math.floor(diffHours / 24)}z`;
-};
+export const formatRelativeTime = formatTimestamp;
 
 function App() {
   const [activePage, setActivePage] = useState('dashboard');
@@ -172,7 +157,6 @@ function App() {
               devices={devices}
               recentActivity={recentActivity}
               loading={isInitialLoading}
-              formatRelativeTime={formatRelativeTime}
               locations={LOCATIONS}
             />
           )}
@@ -180,19 +164,17 @@ function App() {
             <Devices
               devices={devices}
               loading={isInitialLoading}
-              formatRelativeTime={formatRelativeTime}
               locations={LOCATIONS}
               onSelectDevice={setSelectedMac}
             />
           )}
           {activePage === 'alerts' && (
-            <Alerts alerts={alerts} loading={isInitialLoading} formatRelativeTime={formatRelativeTime} />
+            <Alerts alerts={alerts} loading={isInitialLoading} />
           )}
           {activePage === 'locations' && (
             <Locations
               locationSummaries={locationSummaries}
               loading={isInitialLoading}
-              formatRelativeTime={formatRelativeTime}
             />
           )}
           {activePage === 'logs' && (
@@ -205,7 +187,6 @@ function App() {
         isOpen={Boolean(selectedMac)}
         onClose={() => setSelectedMac(null)}
         apiUrl={API_URL}
-        formatRelativeTime={formatRelativeTime}
         locations={LOCATIONS}
       />
     </div>

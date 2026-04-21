@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { formatTimestamp } from '../utils';
 
 const quickFilters = [
   { key: 'all', label: 'Toate' },
@@ -8,7 +9,7 @@ const quickFilters = [
   { key: 'trusted', label: 'De încredere' },
 ];
 
-function Devices({ devices, loading, formatRelativeTime, locations, onSelectDevice }) {
+function Devices({ devices, loading, locations, onSelectDevice }) {
   const [search, setSearch] = useState('');
   const [quickFilter, setQuickFilter] = useState('all');
   const [locationFilter, setLocationFilter] = useState('all');
@@ -185,7 +186,7 @@ function Devices({ devices, loading, formatRelativeTime, locations, onSelectDevi
                     <td>{device.is_phone ? '📱' : '💻'}</td>
                     <td>{device.is_trusted ? '✅' : '❌'}</td>
                     <td>{device.seen_count || 0}</td>
-                    <td>{formatRelativeTime(device.last_seen)}</td>
+                    <td>{formatTimestamp(device.last_seen)}</td>
                   </tr>
                 );
               })}
