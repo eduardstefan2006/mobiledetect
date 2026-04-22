@@ -44,7 +44,7 @@ function App() {
     setIsRefreshing(true);
     try {
       const [devicesResponse, alertsResponse] = await Promise.all([
-        fetch(`${API_URL}/devices`),
+        fetch(`${API_URL}/devices?phones_only=true`),
         fetch(`${API_URL}/alerts`),
       ]);
       const [devicesData, alertsData] = await Promise.all([

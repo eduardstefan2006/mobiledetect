@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from database import get_db
+from detection import is_phone_device
 from models import Alert, ConnectionLog, Device
 
 router = APIRouter()
@@ -25,10 +26,11 @@ def _latest_ip_payload(device: Device) -> dict | None:
 
 
 @router.get("/devices")
-def get_devices(db: Session = Depends(get_db)) -> list[dict]:
-    devices = db.scalars(
-        select(Device).options(joinedload(Device.ips)).order_by(Device.last_seen.desc())
-    ).unique().all()
+def get_devices(phones_only: bool = False, db: Session = Depends(get_db)) -> list[dict]:
+    query = select(Device).options(joinedload(Device.ips)).order_by(Device.last_seen.desc())
+    if phones_only:
+        query = query.where(Device.is_phone.is_(True))
+    devices = db.scalars(query).unique().all()
     response = []
     for device in devices:
         response.append(
@@ -46,6 +48,22 @@ def get_devices(db: Session = Depends(get_db)) -> list[dict]:
             }
         )
     return response
+
+
+@router.post("/devices/re-evaluate-mobile-devices")
+@router.post("/devices/re-evaluate-phones")
+def re_evaluate_phone_flags(db: Session = Depends(get_db)) -> dict:
+    devices = db.scalars(select(Device).execution_options(yield_per=500))
+    updated = 0
+    processed = 0
+    for device in devices:
+        processed += 1
+        new_value = is_phone_device(device.hostname, device.vendor, device.mac_address)
+        if device.is_phone != new_value:
+            device.is_phone = new_value
+            updated += 1
+    db.commit()
+    return {"processed": processed, "updated": updated}
 
 
 @router.get("/devices/{mac}")

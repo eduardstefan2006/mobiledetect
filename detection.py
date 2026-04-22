@@ -4,6 +4,7 @@ import re
 from collections import defaultdict
 
 MOBILE_HOSTNAME_PATTERNS = (
+    # Phones
     "iphone",
     "android",
     "samsung",
@@ -13,6 +14,59 @@ MOBILE_HOSTNAME_PATTERNS = (
     "huawei",
     "redmi",
     "galaxy",
+    "a54",
+    "a53",
+    "a52",
+    "a51",
+    "a50",
+    "a34",
+    "a33",
+    "a32",
+    "a23",
+    "a22",
+    "a21",
+    "a20",
+    "a14",
+    "a13",
+    "a12",
+    "s22",
+    "s23",
+    "s24",
+    "s25",
+    "motorola",
+    "moto",
+    "nokia",
+    "oppo",
+    "vivo",
+    "realme",
+    "infinix",
+    "tecno",
+    "itel",
+    "poco",
+    "mi-",
+    "mi_",
+    # Tablets
+    "ipad",
+    "tablet",
+    "tab-",
+    "tab_",
+    "galaxytab",
+    "galaxy-tab",
+    "mediapad",
+    "matepad",
+    "lenovo-tab",
+    "fire-",
+    "kindle",
+    # Smartwatches
+    "watch",
+    "smartwatch",
+    "garmin",
+    "fitbit",
+    "amazfit",
+    # Common MikroTik hostname suffixes
+    "-al-utilizatorului-",
+    "-ul-lui-",
+    "-ul-ei-",
 )
 
 MOBILE_VENDOR_KEYWORDS = (
@@ -27,6 +81,46 @@ MOBILE_VENDOR_KEYWORDS = (
     "vivo",
     "sony",
     "nokia",
+    "realme",
+    "infinix",
+    "tecno",
+    "garmin",
+    "fitbit",
+    "amazfit",
+    "fossil",
+    "zte",
+    "alcatel",
+    "wiko",
+    "meizu",
+    "asus",
+    "lenovo",
+    "acer",
+)
+
+NON_MOBILE_HOSTNAME_PATTERNS = (
+    "-pc",
+    "-desktop",
+    "-laptop",
+    "pc-",
+    "desktop-",
+    "laptop-",
+    "printer",
+    "camera",
+    "nvr",
+    "dvr",
+    "router",
+    "switch",
+    "ap-",
+    "access-point",
+    "server",
+    "nas-",
+    "mikrotik",
+    "ubiquiti",
+    "projector",
+    "smartboard",
+    "sbid",
+    "tv-",
+    "-tv",
 )
 
 
@@ -54,6 +148,8 @@ def is_phone_device(
 ) -> bool:
     h = (hostname or "").lower()
     v = (vendor or "").lower()
+    if any(k in h for k in NON_MOBILE_HOSTNAME_PATTERNS):
+        return False
     if any(k in h for k in MOBILE_HOSTNAME_PATTERNS):
         return True
     if any(k in v for k in MOBILE_VENDOR_KEYWORDS):
