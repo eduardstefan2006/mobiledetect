@@ -18,8 +18,7 @@ function Devices({ devices, loading, locations, onSelectDevice }) {
 
   const filteredDevices = useMemo(() => {
     const normalizedSearch = search.toLowerCase();
-
-    return devices
+    const sortedResult = devices
       .filter((device) => {
         const searchFields = [
           device.mac_address,
@@ -84,6 +83,17 @@ function Devices({ devices, loading, locations, onSelectDevice }) {
         if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
         return 0;
       });
+
+    const dedupedResult = [];
+    const seenHostnames = new Set();
+    for (const device of sortedResult) {
+      const key = device.hostname ? `h:${device.hostname.toLowerCase()}` : `m:${device.mac_address}`;
+      if (!seenHostnames.has(key)) {
+        seenHostnames.add(key);
+        dedupedResult.push(device);
+      }
+    }
+    return dedupedResult;
   }, [devices, locationFilter, locations, quickFilter, search, sortDirection, sortKey]);
 
   const onSort = (key) => {

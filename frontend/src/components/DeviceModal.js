@@ -51,6 +51,10 @@ function DeviceModal({ macAddress, isOpen, onClose, apiUrl, locations }) {
     () => (Array.isArray(device?.connection_logs) ? device.connection_logs : []),
     [device?.connection_logs],
   );
+  const lastDisconnectedAt = useMemo(
+    () => connectionLogs.find((log) => log.event_type === 'disconnected')?.timestamp || null,
+    [connectionLogs],
+  );
 
   if (!isOpen) return null;
 
@@ -82,6 +86,7 @@ function DeviceModal({ macAddress, isOpen, onClose, apiUrl, locations }) {
               <p><strong>De încredere:</strong> {device.is_trusted ? 'Da' : 'Nu'}</p>
               <p><strong>Prima apariție:</strong> {formatTimestamp(device.first_seen)}</p>
               <p><strong>Ultima apariție:</strong> {formatTimestamp(device.last_seen)}</p>
+              <p><strong>Ultima deconectare:</strong> {formatTimestamp(lastDisconnectedAt)}</p>
               <p><strong>Seen count:</strong> {device.seen_count || 0}</p>
             </div>
 

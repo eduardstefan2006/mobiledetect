@@ -14,7 +14,6 @@ import {
   YAxis,
 } from 'recharts';
 
-const getDeviceLocationName = (device, locations) => locations[device.latest_network?.router_ip]?.name || '';
 const ipToNumber = (ip) => {
   if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(ip || '')) return -1;
   const parts = ip.split('.').map((part) => Number.parseInt(part, 10));
@@ -22,33 +21,49 @@ const ipToNumber = (ip) => {
   return parts.reduce((total, part) => (total << 8) + part, 0);
 };
 
-function Dashboard({ locationSummaries, devices, recentActivity, loading, locations, onSelectDevice }) {
+function Dashboard({ locationSummaries, devices, loading, locations, onSelectDevice }) {
   const [locationFilter, setLocationFilter] = useState('all');
   const [sortKey, setSortKey] = useState('last_seen');
-  const [sortDirection, setSortDirection] = useState('desc');
-  const barData = useMemo(
-    () =>
-      locationSummaries.map((item) => ({
-        name: item.name,
-        online: item.online,
-        offline: Math.max(item.total - item.online, 0),
-      })),
-    [locationSummaries],
-  );
+  const [sortDir, setSortDir] = useState('desc');
+
+  const barData = useMemo(() => locationSummaries.map((item) => ({
+    name: item.name,
+    online: item.online,
+    offline: Math.max(item.total - item.online, 0),
+  })), [locationSummaries]);
 
   const pieData = useMemo(() => {
     const phones = devices.filter((device) => device.is_phone).length;
-    const others = Math.max(devices.length - phones, 0);
     return [
       { name: 'Telefoane', value: phones, color: '#10b981' },
-      { name: 'Alte dispozitive', value: others, color: '#6366f1' },
+      { name: 'Alte dispozitive', value: Math.max(devices.length - phones, 0), color: '#6366f1' },
     ];
   }, [devices]);
 
-  const filteredActivity = useMemo(() => {
+  const onSort = (key) => {
+    if (sortKey === key) setSortDir((direction) => (direction === 'asc' ? 'desc' : 'asc'));
+    else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  };
+  const sortIndicator = (key) => (sortKey === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : '');
+
+  const tableData = useMemo(() => {
+    const sortedByActivity = [...devices].sort((a, b) => new Date(b.last_seen || 0) - new Date(a.last_seen || 0));
+    const seen = new Set();
+    const deduped = [];
+    for (const device of sortedByActivity) {
+      const key = device.hostname ? `h:${device.hostname.toLowerCase()}` : `m:${device.mac_address}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        deduped.push(device);
+      }
+    }
+
     let result = locationFilter === 'all'
-      ? [...recentActivity]
-      : recentActivity.filter((device) => device.latest_network?.router_ip === locationFilter);
+      ? deduped
+      : deduped.filter((device) => device.latest_network?.router_ip === locationFilter);
 
     result.sort((a, b) => {
       let aVal;
@@ -59,30 +74,23 @@ function Dashboard({ locationSummaries, devices, recentActivity, loading, locati
       } else if (sortKey === 'ip') {
         aVal = ipToNumber(a.latest_network?.ip_address);
         bVal = ipToNumber(b.latest_network?.ip_address);
+      } else if (sortKey === 'vlan') {
+        aVal = a.latest_network?.vlan || '';
+        bVal = b.latest_network?.vlan || '';
       } else if (sortKey === 'location') {
-        aVal = getDeviceLocationName(a, locations).toLowerCase();
-        bVal = getDeviceLocationName(b, locations).toLowerCase();
+        aVal = (locations[a.latest_network?.router_ip]?.name || '').toLowerCase();
+        bVal = (locations[b.latest_network?.router_ip]?.name || '').toLowerCase();
       } else {
         aVal = new Date(a.last_seen || 0).getTime();
         bVal = new Date(b.last_seen || 0).getTime();
       }
-
-      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
-      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
       return 0;
     });
 
-    return result.slice(0, 20);
-  }, [recentActivity, locationFilter, sortKey, sortDirection, locations]);
-
-  const onSort = (key) => {
-    if (sortKey === key) {
-      setSortDirection((direction) => (direction === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortKey(key);
-      setSortDirection('asc');
-    }
-  };
+    return result.slice(0, 30);
+  }, [devices, locationFilter, sortKey, sortDir, locations]);
 
   if (loading) {
     return (
@@ -91,10 +99,6 @@ function Dashboard({ locationSummaries, devices, recentActivity, loading, locati
           {Array.from({ length: 5 }).map((_, index) => (
             <div key={index} className="card skeleton-card" />
           ))}
-        </div>
-        <div className="chart-grid">
-          <div className="card skeleton-card chart-skeleton" />
-          <div className="card skeleton-card chart-skeleton" />
         </div>
       </section>
     );
@@ -130,15 +134,12 @@ function Dashboard({ locationSummaries, devices, recentActivity, loading, locati
             </BarChart>
           </ResponsiveContainer>
         </article>
-
         <article className="card chart-card">
           <h3>Telefoane vs Alte dispozitive</h3>
           <ResponsiveContainer width="100%" height={260}>
             <PieChart>
               <Pie data={pieData} dataKey="value" nameKey="name" outerRadius={92} innerRadius={50} label>
-                {pieData.map((entry) => (
-                  <Cell key={entry.name} fill={entry.color} />
-                ))}
+                {pieData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
               </Pie>
               <Tooltip />
               <Legend />
@@ -149,7 +150,7 @@ function Dashboard({ locationSummaries, devices, recentActivity, loading, locati
 
       <article className="card">
         <h3>Activitate recentă</h3>
-        <div className="filter-row">
+        <div className="filter-row" style={{ marginBottom: 12 }}>
           <button className={locationFilter === 'all' ? 'chip active' : 'chip'} onClick={() => setLocationFilter('all')}>
             Toate
           </button>
@@ -170,30 +171,22 @@ function Dashboard({ locationSummaries, devices, recentActivity, loading, locati
             <thead>
               <tr>
                 <th>MAC Address</th>
-                <th onClick={() => onSort('hostname')} className="sortable">
-                  Hostname {sortKey === 'hostname' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
-                </th>
-                <th onClick={() => onSort('ip')} className="sortable">
-                  IP {sortKey === 'ip' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
-                </th>
-                <th>VLAN</th>
-                <th onClick={() => onSort('location')} className="sortable">
-                  Locație {sortKey === 'location' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
-                </th>
-                <th onClick={() => onSort('last_seen')} className="sortable">
-                  Ultima activitate {sortKey === 'last_seen' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
-                </th>
+                <th onClick={() => onSort('hostname')} className="sortable">Hostname{sortIndicator('hostname')}</th>
+                <th onClick={() => onSort('ip')} className="sortable">IP{sortIndicator('ip')}</th>
+                <th onClick={() => onSort('vlan')} className="sortable">VLAN{sortIndicator('vlan')}</th>
+                <th onClick={() => onSort('location')} className="sortable">Locație{sortIndicator('location')}</th>
+                <th onClick={() => onSort('last_seen')} className="sortable">Ultima activitate{sortIndicator('last_seen')}</th>
               </tr>
             </thead>
             <tbody>
-              {filteredActivity.map((device) => (
+              {tableData.map((device) => (
                 <tr
                   key={device.mac_address}
-                  onClick={() => onSelectDevice(device.mac_address)}
+                  onClick={() => onSelectDevice && onSelectDevice(device.mac_address)}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter') {
                       event.preventDefault();
-                      onSelectDevice(device.mac_address);
+                      onSelectDevice && onSelectDevice(device.mac_address);
                     }
                   }}
                   className="clickable-row"
@@ -201,14 +194,14 @@ function Dashboard({ locationSummaries, devices, recentActivity, loading, locati
                   role="button"
                 >
                   <td>{device.mac_address}</td>
-                  <td>{device.hostname || device.vendor || (device.is_phone ? 'Telefon (MAC privat)' : '-')}</td>
+                  <td>{device.hostname || device.vendor || (device.is_phone ? '📱 Telefon (MAC privat)' : '-')}</td>
                   <td>{device.latest_network?.ip_address || '-'}</td>
                   <td>{device.latest_network?.vlan || '-'}</td>
-                  <td>{getDeviceLocationName(device, locations) || '-'}</td>
+                  <td>{locations[device.latest_network?.router_ip]?.name || '-'}</td>
                   <td>{formatTimestamp(device.last_seen)}</td>
                 </tr>
               ))}
-              {filteredActivity.length === 0 && (
+              {tableData.length === 0 && (
                 <tr>
                   <td colSpan="6" className="empty-state">Nu există activitate recentă.</td>
                 </tr>

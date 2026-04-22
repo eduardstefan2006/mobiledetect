@@ -119,24 +119,17 @@ function App() {
       (a, b) => new Date(b.last_seen || 0).getTime() - new Date(a.last_seen || 0).getTime(),
     );
 
-    const seenDeviceKeys = new Set();
-    const deduplicated = [];
+    const seen = new Set();
+    const result = [];
     for (const device of sorted) {
-      const hostname = (device.hostname || '').toLowerCase().trim();
-      const macAddress = (device.mac_address || '').toLowerCase().trim();
-
-      if (!hostname && !macAddress) {
-        continue;
-      }
-
-      const key = hostname ? `host:${hostname}` : `mac:${macAddress}`;
-      if (!seenDeviceKeys.has(key)) {
-        seenDeviceKeys.add(key);
-        deduplicated.push(device);
+      const key = device.hostname ? `h:${device.hostname.toLowerCase()}` : `m:${device.mac_address}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        result.push(device);
       }
     }
 
-    return deduplicated.slice(0, 30);
+    return result.slice(0, 50);
   }, [devices]);
 
   return (
