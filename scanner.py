@@ -132,7 +132,7 @@ def process_scan_results(records: list[dict[str, Any]]) -> None:
                     last_seen=now,
                     seen_count=1,
                     is_trusted=False,
-                    is_phone=is_phone_device(hostname, vendor),
+                    is_phone=is_phone_device(hostname, vendor, mac),
                 )
                 device.refresh_offline_status()
                 session.add(device)
@@ -186,7 +186,7 @@ def process_scan_results(records: list[dict[str, Any]]) -> None:
             existing.seen_count += 1
             existing.hostname = existing.hostname or hostname
             existing.vendor = existing.vendor or vendor
-            existing.is_phone = existing.is_phone or is_phone_device(hostname, vendor)
+            existing.is_phone = existing.is_phone or is_phone_device(hostname, vendor, mac)
             existing.is_trusted = existing.seen_count > 20
             existing.refresh_offline_status()
             if was_offline.get(mac, False) and not existing.is_offline:
