@@ -50,16 +50,20 @@ def get_devices(phones_only: bool = False, db: Session = Depends(get_db)) -> lis
     return response
 
 
+@router.post("/devices/re-evaluate-mobile-devices")
 @router.post("/devices/re-evaluate-phones")
 def re_evaluate_phone_flags(db: Session = Depends(get_db)) -> dict:
-    devices = db.scalars(select(Device)).all()
+    devices = db.scalars(select(Device).execution_options(yield_per=500))
     updated = 0
+    processed = 0
     for device in devices:
+        processed += 1
         new_value = is_phone_device(device.hostname, device.vendor, device.mac_address)
         if device.is_phone != new_value:
             device.is_phone = new_value
             updated += 1
-    return {"processed": len(devices), "updated": updated}
+    db.commit()
+    return {"processed": processed, "updated": updated}
 
 
 @router.get("/devices/{mac}")

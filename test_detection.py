@@ -7,10 +7,10 @@ class IsPhoneDeviceTests(unittest.TestCase):
     def test_detects_phone_from_hostname(self) -> None:
         self.assertTrue(is_phone_device("my-iphone", None))
 
-    def test_detects_tablet_from_hostname(self) -> None:
+    def test_detects_tablet_as_mobile_device(self) -> None:
         self.assertTrue(is_phone_device("office-ipad", None))
 
-    def test_detects_smartwatch_from_hostname(self) -> None:
+    def test_detects_smartwatch_as_mobile_device(self) -> None:
         self.assertTrue(is_phone_device("garmin-watch", None))
 
     def test_detects_phone_from_vendor(self) -> None:
