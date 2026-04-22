@@ -186,6 +186,7 @@ def get_device(mac: str, db: Session = Depends(get_db)) -> dict:
             "old_ip": log.old_ip,
             "old_vlan": log.old_vlan,
             "old_router_ip": log.old_router_ip,
+            "hostname": log.hostname,
             "timestamp": log.timestamp,
         }
         for log in logs
