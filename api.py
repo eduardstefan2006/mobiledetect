@@ -54,15 +54,17 @@ def get_devices(phones_only: bool = False, db: Session = Depends(get_db)) -> lis
 @router.post("/devices/re-evaluate-phones")
 @router.post("/devices/reevaluate")
 def re_evaluate_phone_flags(db: Session = Depends(get_db)) -> dict:
-    devices = db.scalars(select(Device)).all()
+    devices = db.scalars(select(Device).execution_options(yield_per=500))
     updated = 0
+    total = 0
     for device in devices:
+        total += 1
         new_value = is_phone_device(device.hostname, device.vendor, device.mac_address)
         if device.is_phone != new_value:
             device.is_phone = new_value
             updated += 1
     db.commit()
-    return {"updated": updated, "total": len(devices)}
+    return {"updated": updated, "total": total}
 
 
 @router.get("/devices/{mac}")
