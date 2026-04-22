@@ -14,6 +14,13 @@ import {
   YAxis,
 } from 'recharts';
 
+const ipToNumber = (ip) => {
+  if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(ip || '')) return -1;
+  const parts = ip.split('.').map((part) => Number.parseInt(part, 10));
+  if (parts.some((part) => part < 0 || part > 255)) return -1;
+  return parts.reduce((total, part) => (total << 8) + part, 0);
+};
+
 function Dashboard({ locationSummaries, devices, loading, locations, onSelectDevice }) {
   const [locationFilter, setLocationFilter] = useState('all');
   const [sortKey, setSortKey] = useState('last_seen');
@@ -65,8 +72,8 @@ function Dashboard({ locationSummaries, devices, loading, locations, onSelectDev
         aVal = (a.hostname || a.vendor || '').toLowerCase();
         bVal = (b.hostname || b.vendor || '').toLowerCase();
       } else if (sortKey === 'ip') {
-        aVal = a.latest_network?.ip_address || '';
-        bVal = b.latest_network?.ip_address || '';
+        aVal = ipToNumber(a.latest_network?.ip_address);
+        bVal = ipToNumber(b.latest_network?.ip_address);
       } else if (sortKey === 'vlan') {
         aVal = a.latest_network?.vlan || '';
         bVal = b.latest_network?.vlan || '';
@@ -173,7 +180,19 @@ function Dashboard({ locationSummaries, devices, loading, locations, onSelectDev
             </thead>
             <tbody>
               {tableData.map((device) => (
-                <tr key={device.mac_address} onClick={() => onSelectDevice && onSelectDevice(device.mac_address)} className="clickable-row">
+                <tr
+                  key={device.mac_address}
+                  onClick={() => onSelectDevice && onSelectDevice(device.mac_address)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      onSelectDevice && onSelectDevice(device.mac_address);
+                    }
+                  }}
+                  className="clickable-row"
+                  tabIndex={0}
+                  role="button"
+                >
                   <td>{device.mac_address}</td>
                   <td>{device.hostname || device.vendor || (device.is_phone ? '📱 Telefon (MAC privat)' : '-')}</td>
                   <td>{device.latest_network?.ip_address || '-'}</td>
