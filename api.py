@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -25,7 +26,9 @@ def _latest_ip_payload(device: Device) -> dict | None:
     }
 
 
-def _connection_timestamp_maps(db: Session) -> tuple[dict[str, object], dict[str, object]]:
+def _connection_timestamp_maps(
+    db: Session,
+) -> tuple[dict[str, datetime | None], dict[str, datetime | None]]:
     last_connected_sq = (
         select(
             ConnectionLog.mac_address,

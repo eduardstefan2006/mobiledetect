@@ -267,7 +267,7 @@ def process_scan_results(records: list[dict[str, Any]]) -> None:
         devices = session.scalars(select(Device)).all()
         for device in devices:
             if device.mac_address not in scanned_macs:
-                previously_offline = was_offline.get(device.mac_address, False)
+                previously_offline = was_offline.get(device.mac_address, True)
                 device.is_offline = True
                 if not previously_offline:
                     latest_ip = device.ips[0] if device.ips else None
