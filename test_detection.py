@@ -28,6 +28,7 @@ class IsPhoneDeviceTests(unittest.TestCase):
         self.assertFalse(is_phone_device("lab-printer-01", "Apple"))
 
     def test_does_not_detect_common_laptop_hostnames_as_mobile(self) -> None:
+        self.assertFalse(is_phone_device("macbook-office", None))
         self.assertFalse(is_phone_device("office-vivobook-a14", None))
         self.assertFalse(is_phone_device("teacher-thinkpad", "Lenovo"))
         self.assertFalse(is_phone_device("student-macbook-air", "Apple"))
