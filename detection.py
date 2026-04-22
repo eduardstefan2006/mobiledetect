@@ -47,10 +47,20 @@ def normalize_hostname(hostname: str | None) -> str | None:
     return name if name else None
 
 
-def is_phone_device(hostname: str | None, vendor: str | None) -> bool:
+def is_phone_device(
+    hostname: str | None,
+    vendor: str | None,
+    mac_address: str | None = None,
+) -> bool:
     h = (hostname or "").lower()
     v = (vendor or "").lower()
-    return any(k in h for k in MOBILE_HOSTNAME_PATTERNS) or any(k in v for k in MOBILE_VENDOR_KEYWORDS)
+    if any(k in h for k in MOBILE_HOSTNAME_PATTERNS):
+        return True
+    if any(k in v for k in MOBILE_VENDOR_KEYWORDS):
+        return True
+    if mac_address and maybe_randomized_mac(mac_address):
+        return True
+    return False
 
 
 def maybe_randomized_mac(mac_address: str) -> bool:
