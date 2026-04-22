@@ -193,12 +193,12 @@ def is_phone_device(
         return True
 
     if mac_address and maybe_randomized_mac(mac_address):
-        if not h and not v:
-            return True
         if h and not any(k in h for k in MOBILE_HOSTNAME_PATTERNS):
             return False
         if v and not any(k in v for k in MOBILE_VENDOR_KEYWORDS):
             return False
+        if not h and not v:
+            return True
 
     return False
 

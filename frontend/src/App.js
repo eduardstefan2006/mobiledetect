@@ -124,12 +124,12 @@ function App() {
     for (const device of sorted) {
       const hostname = (device.hostname || '').toLowerCase().trim();
       const macAddress = (device.mac_address || '').toLowerCase().trim();
-      const key = hostname ? `host:${hostname}` : `mac:${macAddress}`;
 
-      if (!key || key === 'mac:') {
+      if (!hostname && !macAddress) {
         continue;
       }
 
+      const key = hostname ? `host:${hostname}` : `mac:${macAddress}`;
       if (!seenDeviceKeys.has(key)) {
         seenDeviceKeys.add(key);
         deduplicated.push(device);

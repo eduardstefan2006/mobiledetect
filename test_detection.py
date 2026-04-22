@@ -38,6 +38,9 @@ class IsPhoneDeviceTests(unittest.TestCase):
     def test_detects_phone_from_randomized_mac_with_blank_hostname_and_vendor(self) -> None:
         self.assertTrue(is_phone_device("   ", "   ", "02:11:22:33:44:55"))
 
+    def test_detects_phone_from_randomized_mac_with_empty_hostname_and_vendor(self) -> None:
+        self.assertTrue(is_phone_device("", "", "02:11:22:33:44:55"))
+
     def test_does_not_detect_phone_from_globally_administered_mac_without_other_signals(self) -> None:
         self.assertFalse(is_phone_device(None, None, "00:11:22:33:44:55"))
 
