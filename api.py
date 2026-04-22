@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -25,12 +26,46 @@ def _latest_ip_payload(device: Device) -> dict | None:
     }
 
 
+def _connection_timestamp_maps(
+    db: Session,
+) -> tuple[dict[str, datetime | None], dict[str, datetime | None]]:
+    last_connected_sq = (
+        select(
+            ConnectionLog.mac_address,
+            func.max(ConnectionLog.timestamp).label("connected_at"),
+        )
+        .where(ConnectionLog.event_type == "connected")
+        .group_by(ConnectionLog.mac_address)
+        .subquery()
+    )
+    last_disconnected_sq = (
+        select(
+            ConnectionLog.mac_address,
+            func.max(ConnectionLog.timestamp).label("disconnected_at"),
+        )
+        .where(ConnectionLog.event_type == "disconnected")
+        .group_by(ConnectionLog.mac_address)
+        .subquery()
+    )
+
+    connected_map = {
+        row.mac_address: row.connected_at
+        for row in db.execute(select(last_connected_sq)).all()
+    }
+    disconnected_map = {
+        row.mac_address: row.disconnected_at
+        for row in db.execute(select(last_disconnected_sq)).all()
+    }
+    return connected_map, disconnected_map
+
+
 @router.get("/devices")
 def get_devices(phones_only: bool = False, db: Session = Depends(get_db)) -> list[dict]:
     query = select(Device).options(joinedload(Device.ips)).order_by(Device.last_seen.desc())
     if phones_only:
         query = query.where(Device.is_phone.is_(True))
     devices = db.scalars(query).unique().all()
+    connected_map, disconnected_map = _connection_timestamp_maps(db)
     response = []
     for device in devices:
         response.append(
@@ -45,6 +80,8 @@ def get_devices(phones_only: bool = False, db: Session = Depends(get_db)) -> lis
                 "is_offline": device.is_offline,
                 "is_phone": device.is_phone,
                 "latest_network": _latest_ip_payload(device),
+                "connected_at": connected_map.get(device.mac_address),
+                "disconnected_at": disconnected_map.get(device.mac_address),
             }
         )
     return response
@@ -121,6 +158,7 @@ def get_device(mac: str, db: Session = Depends(get_db)) -> dict:
     device = db.scalar(select(Device).options(joinedload(Device.ips)).where(Device.mac_address == mac.lower()))
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
+    connected_map, disconnected_map = _connection_timestamp_maps(db)
 
     history = [
         {
@@ -164,6 +202,8 @@ def get_device(mac: str, db: Session = Depends(get_db)) -> dict:
         "is_offline": device.is_offline,
         "is_phone": device.is_phone,
         "latest_network": _latest_ip_payload(device),
+        "connected_at": connected_map.get(device.mac_address),
+        "disconnected_at": disconnected_map.get(device.mac_address),
         "history": history,
         "connection_logs": connection_logs,
     }

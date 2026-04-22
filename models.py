@@ -37,7 +37,7 @@ class Device(Base):
     )
 
     def refresh_offline_status(self) -> None:
-        threshold = datetime.now(timezone.utc) - timedelta(hours=24)
+        threshold = datetime.now(timezone.utc) - timedelta(minutes=10)
         self.is_offline = self.last_seen < threshold
 
 

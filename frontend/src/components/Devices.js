@@ -179,7 +179,10 @@ function Devices({ devices, loading, locations, onSelectDevice }) {
                   <tr key={device.mac_address} onClick={() => onSelectDevice(device.mac_address)} className="clickable-row">
                     <td>
                       <span className={device.is_offline ? 'badge danger' : 'badge success'}>
-                        {device.is_offline ? '🔴 Offline' : '🟢 Online'}
+                        {device.is_offline
+                          ? `🔴 Offline · ${device.disconnected_at ? formatTimestamp(device.disconnected_at) : '-'}`
+                          : `🟢 Online · ${device.connected_at ? formatTimestamp(device.connected_at) : '-'}`
+                        }
                       </span>
                     </td>
                     <td>{device.mac_address}</td>

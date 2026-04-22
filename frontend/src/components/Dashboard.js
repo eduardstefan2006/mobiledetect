@@ -170,6 +170,7 @@ function Dashboard({ locationSummaries, devices, loading, locations, onSelectDev
           <table>
             <thead>
               <tr>
+                <th>Status</th>
                 <th>MAC Address</th>
                 <th onClick={() => onSort('hostname')} className="sortable">Hostname{sortIndicator('hostname')}</th>
                 <th onClick={() => onSort('ip')} className="sortable">IP{sortIndicator('ip')}</th>
@@ -193,6 +194,12 @@ function Dashboard({ locationSummaries, devices, loading, locations, onSelectDev
                   tabIndex={0}
                   role="button"
                 >
+                  <td>
+                    {device.is_offline
+                      ? <span style={{ color: '#ef4444' }}>🔴 {device.disconnected_at ? new Date(device.disconnected_at).toLocaleString('ro-RO') : 'Offline'}</span>
+                      : <span style={{ color: '#10b981' }}>🟢 {device.connected_at ? new Date(device.connected_at).toLocaleString('ro-RO') : 'Online'}</span>
+                    }
+                  </td>
                   <td>{device.mac_address}</td>
                   <td>{device.hostname || device.vendor || (device.is_phone ? '📱 Telefon (MAC privat)' : '-')}</td>
                   <td>{device.latest_network?.ip_address || '-'}</td>
@@ -203,7 +210,7 @@ function Dashboard({ locationSummaries, devices, loading, locations, onSelectDev
               ))}
               {tableData.length === 0 && (
                 <tr>
-                  <td colSpan="6" className="empty-state">Nu există activitate recentă.</td>
+                  <td colSpan="7" className="empty-state">Nu există activitate recentă.</td>
                 </tr>
               )}
             </tbody>
