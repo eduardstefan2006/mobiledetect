@@ -121,6 +121,42 @@ NON_MOBILE_HOSTNAME_PATTERNS = (
     "sbid",
     "tv-",
     "-tv",
+    # Infrastructure and servers
+    "pihole",
+    "pi-hole",
+    "raspberry",
+    "raspi",
+    "resurseumane",
+    "resurseum",
+    "proxmox",
+    "homeassistant",
+    "home-assistant",
+    "synology",
+    "qnap",
+    "unraid",
+    "pfsense",
+    "opnsense",
+    "esxi",
+    "vmware",
+    "hyperv",
+    "docker",
+    "ubuntu",
+    "debian",
+    "centos",
+    "fedora",
+    "windows",
+    "win-",
+    "-win",
+    "srv-",
+    "-srv",
+    "host-",
+    "-host",
+    "node-",
+    "-node",
+    "wlan",
+    "eth0",
+    "ens",
+    "enp",
 )
 
 
@@ -155,7 +191,10 @@ def is_phone_device(
     if any(k in v for k in MOBILE_VENDOR_KEYWORDS):
         return True
     if mac_address and maybe_randomized_mac(mac_address):
-        return True
+        if h and not any(k in h for k in MOBILE_HOSTNAME_PATTERNS):
+            return False
+        if not h:
+            return True
     return False
 
 
