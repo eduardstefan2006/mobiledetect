@@ -95,7 +95,22 @@ function App() {
 
   const locationSummaries = useMemo(() => {
     return Object.entries(LOCATIONS).map(([routerIp, meta]) => {
-      const locationDevices = devices.filter((device) => device.latest_network?.router_ip === routerIp);
+      const rawLocationDevices = devices.filter((device) => device.latest_network?.router_ip === routerIp);
+
+      // Deduplicare după hostname (la fel ca în recentActivity și tableData)
+      const sortedByActivity = [...rawLocationDevices].sort(
+        (a, b) => new Date(b.last_seen || 0).getTime() - new Date(a.last_seen || 0).getTime(),
+      );
+      const seen = new Set();
+      const locationDevices = [];
+      for (const device of sortedByActivity) {
+        const key = device.hostname ? `h:${device.hostname.toLowerCase()}` : `m:${device.mac_address}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          locationDevices.push(device);
+        }
+      }
+
       const online = locationDevices.filter((device) => !device.is_offline).length;
       const phones = locationDevices.filter((device) => device.is_phone).length;
       const latestSeen = locationDevices
