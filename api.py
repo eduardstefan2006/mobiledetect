@@ -83,6 +83,27 @@ def get_device(mac: str, db: Session = Depends(get_db)) -> dict:
         for ip in device.ips
     ]
 
+    logs = db.scalars(
+        select(ConnectionLog)
+        .where(ConnectionLog.mac_address == mac.lower())
+        .order_by(ConnectionLog.timestamp.desc())
+        .limit(100)
+    ).all()
+
+    connection_logs = [
+        {
+            "event_type": log.event_type,
+            "ip_address": log.ip_address,
+            "vlan": log.vlan,
+            "router_ip": log.router_ip,
+            "old_ip": log.old_ip,
+            "old_vlan": log.old_vlan,
+            "old_router_ip": log.old_router_ip,
+            "timestamp": log.timestamp,
+        }
+        for log in logs
+    ]
+
     return {
         "mac_address": device.mac_address,
         "vendor": device.vendor,
@@ -93,7 +114,9 @@ def get_device(mac: str, db: Session = Depends(get_db)) -> dict:
         "is_trusted": device.is_trusted,
         "is_offline": device.is_offline,
         "is_phone": device.is_phone,
+        "latest_network": _latest_ip_payload(device),
         "history": history,
+        "connection_logs": connection_logs,
     }
 
 

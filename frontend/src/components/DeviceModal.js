@@ -1,6 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { formatTimestamp } from '../utils';
 
+const EVENT_LABELS = {
+  connected: { label: 'Conectat', color: '#10b981' },
+  disconnected: { label: 'Deconectat', color: '#ef4444' },
+  network_change: { label: 'Schimbare rețea', color: '#f59e0b' },
+};
+
 function DeviceModal({ macAddress, isOpen, onClose, apiUrl, locations }) {
   const [device, setDevice] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -41,7 +47,10 @@ function DeviceModal({ macAddress, isOpen, onClose, apiUrl, locations }) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [isOpen, onClose]);
 
-  const history = useMemo(() => (Array.isArray(device?.history) ? device.history : []), [device?.history]);
+  const connectionLogs = useMemo(
+    () => (Array.isArray(device?.connection_logs) ? device.connection_logs : []),
+    [device?.connection_logs],
+  );
 
   if (!isOpen) return null;
 
@@ -76,29 +85,38 @@ function DeviceModal({ macAddress, isOpen, onClose, apiUrl, locations }) {
               <p><strong>Seen count:</strong> {device.seen_count || 0}</p>
             </div>
 
-            <h4>Istoric IP</h4>
+            <h4>Istoric conexiuni</h4>
             <div className="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>IP Address</th>
+                    <th>Eveniment</th>
+                    <th>IP</th>
                     <th>VLAN</th>
                     <th>Router</th>
                     <th>Timp</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {history.map((entry, index) => (
-                    <tr key={`${entry.timestamp}-${entry.ip_address}-${index}`}>
-                      <td>{entry.ip_address || '-'}</td>
-                      <td>{entry.vlan || '-'}</td>
-                      <td>{locations[entry.router_ip]?.name || entry.router_ip || '-'}</td>
-                      <td>{formatTimestamp(entry.timestamp)}</td>
-                    </tr>
-                  ))}
-                  {!history.length && (
+                  {connectionLogs.map((log, index) => {
+                    const meta = EVENT_LABELS[log.event_type] || { label: log.event_type, color: '#8892b0' };
+                    return (
+                      <tr key={`${log.timestamp}-${index}`}>
+                        <td>
+                          <span style={{ color: meta.color, fontWeight: 600 }}>
+                            {meta.label}
+                          </span>
+                        </td>
+                        <td>{log.ip_address || '-'}</td>
+                        <td>{log.vlan || '-'}</td>
+                        <td>{locations[log.router_ip]?.name || log.router_ip || '-'}</td>
+                        <td>{formatTimestamp(log.timestamp)}</td>
+                      </tr>
+                    );
+                  })}
+                  {!connectionLogs.length && (
                     <tr>
-                      <td colSpan="4" className="empty-state">Nu există istoric disponibil.</td>
+                      <td colSpan="5" className="empty-state">Nu există istoric disponibil.</td>
                     </tr>
                   )}
                 </tbody>
