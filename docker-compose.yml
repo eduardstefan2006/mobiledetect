@@ -21,10 +21,13 @@ services:
   backend:
     build: .
     container_name: nm_backend
+    network_mode: host
     environment:
-      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-network_monitor}
-    ports:
-      - "8000:8000"
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@localhost:5432/${POSTGRES_DB:-network_monitor}
+      ROUTER_IPS: ${ROUTER_IPS:-192.168.1.1,192.168.2.1,192.168.3.1,192.168.4.1,192.168.5.1}
+      ROUTER_USERNAME: ${ROUTER_USERNAME:-openclaw}
+      ROUTER_PASSWORD: ${ROUTER_PASSWORD:-}
+      SCAN_INTERVAL_SECONDS: ${SCAN_INTERVAL_SECONDS:-420}
     depends_on:
       db:
         condition: service_healthy

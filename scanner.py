@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from datetime import datetime, timezone
 from typing import Any
 
@@ -30,11 +31,11 @@ def _safe_get_python_value(self, value: bytes) -> str:
 _api_structure.StringField.get_python_value = _safe_get_python_value
 
 ROUTERS = [
-    "192.168.1.1",
-    "192.168.2.1",
-    "192.168.3.1",
-    "192.168.4.1",
-    "192.168.5.1",
+    r.strip()
+    for r in os.getenv(
+        "ROUTER_IPS", "192.168.1.1,192.168.2.1,192.168.3.1,192.168.4.1,192.168.5.1"
+    ).split(",")
+    if r.strip()
 ]
 # Router to location mapping:
 # 192.168.1.1 -> Școala 1
@@ -43,9 +44,9 @@ ROUTERS = [
 # 192.168.4.1 -> Școala 4
 # 192.168.5.1 -> Grădinița 3
 
-ROUTER_USERNAME = "openclaw"
-ROUTER_PASSWORD = "Liesti2026"
-SCAN_INTERVAL_SECONDS = 420
+ROUTER_USERNAME = os.getenv("ROUTER_USERNAME", "openclaw")
+ROUTER_PASSWORD = os.getenv("ROUTER_PASSWORD", "")
+SCAN_INTERVAL_SECONDS = int(os.getenv("SCAN_INTERVAL_SECONDS", "420"))
 
 
 class MikroTikScanner:
