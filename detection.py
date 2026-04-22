@@ -182,19 +182,24 @@ def is_phone_device(
     vendor: str | None,
     mac_address: str | None = None,
 ) -> bool:
-    h = (hostname or "").lower()
-    v = (vendor or "").lower()
-    if any(k in h for k in NON_MOBILE_HOSTNAME_PATTERNS):
+    h = (hostname or "").lower().strip()
+    v = (vendor or "").lower().strip()
+
+    if h and any(k in h for k in NON_MOBILE_HOSTNAME_PATTERNS):
         return False
-    if any(k in h for k in MOBILE_HOSTNAME_PATTERNS):
+    if h and any(k in h for k in MOBILE_HOSTNAME_PATTERNS):
         return True
-    if any(k in v for k in MOBILE_VENDOR_KEYWORDS):
+    if v and any(k in v for k in MOBILE_VENDOR_KEYWORDS):
         return True
+
     if mac_address and maybe_randomized_mac(mac_address):
         if h and not any(k in h for k in MOBILE_HOSTNAME_PATTERNS):
             return False
-        if not h:
+        if v and not any(k in v for k in MOBILE_VENDOR_KEYWORDS):
+            return False
+        if not h and not v:
             return True
+
     return False
 
 
