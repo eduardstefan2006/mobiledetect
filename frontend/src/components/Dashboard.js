@@ -14,6 +14,14 @@ import {
   YAxis,
 } from 'recharts';
 
+const getDeviceLocationName = (device, locations) => locations[device.latest_network?.router_ip]?.name || '';
+const ipToNumber = (ip) => {
+  if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(ip || '')) return -1;
+  const parts = ip.split('.').map((part) => Number.parseInt(part, 10));
+  if (parts.some((part) => part < 0 || part > 255)) return -1;
+  return parts.reduce((total, part) => (total << 8) + part, 0);
+};
+
 function Dashboard({ locationSummaries, devices, recentActivity, loading, locations, onSelectDevice }) {
   const [locationFilter, setLocationFilter] = useState('all');
   const [sortKey, setSortKey] = useState('last_seen');
@@ -49,11 +57,11 @@ function Dashboard({ locationSummaries, devices, recentActivity, loading, locati
         aVal = (a.hostname || a.vendor || '').toLowerCase();
         bVal = (b.hostname || b.vendor || '').toLowerCase();
       } else if (sortKey === 'ip') {
-        aVal = a.latest_network?.ip_address || '';
-        bVal = b.latest_network?.ip_address || '';
+        aVal = ipToNumber(a.latest_network?.ip_address);
+        bVal = ipToNumber(b.latest_network?.ip_address);
       } else if (sortKey === 'location') {
-        aVal = (locations[a.latest_network?.router_ip]?.name || '').toLowerCase();
-        bVal = (locations[b.latest_network?.router_ip]?.name || '').toLowerCase();
+        aVal = getDeviceLocationName(a, locations).toLowerCase();
+        bVal = getDeviceLocationName(b, locations).toLowerCase();
       } else {
         aVal = new Date(a.last_seen || 0).getTime();
         bVal = new Date(b.last_seen || 0).getTime();
@@ -178,11 +186,23 @@ function Dashboard({ locationSummaries, devices, recentActivity, loading, locati
             </thead>
             <tbody>
               {filteredActivity.map((device) => (
-                <tr key={device.mac_address} onClick={() => onSelectDevice(device.mac_address)} className="clickable-row">
+                <tr
+                  key={device.mac_address}
+                  onClick={() => onSelectDevice(device.mac_address)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      onSelectDevice(device.mac_address);
+                    }
+                  }}
+                  className="clickable-row"
+                  tabIndex={0}
+                  role="button"
+                >
                   <td>{device.mac_address}</td>
                   <td>{device.hostname || device.vendor || '-'}</td>
                   <td>{device.latest_network?.ip_address || '-'}</td>
-                  <td>{locations[device.latest_network?.router_ip]?.name || '-'}</td>
+                  <td>{getDeviceLocationName(device, locations) || '-'}</td>
                   <td>{formatTimestamp(device.last_seen)}</td>
                 </tr>
               ))}
