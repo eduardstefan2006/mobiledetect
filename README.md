@@ -15,6 +15,8 @@ Monitorizare rețea și detecție dispozitive mobile prin Mikrotik RouterOS API.
 docker-compose up -d
 ```
 
+> Backend-ul rulează cu `network_mode: host` pentru a putea accesa routerele MikroTik din rețeaua locală.
+
 Backend: http://localhost:8000
 Frontend: http://localhost:3000
 
@@ -42,4 +44,4 @@ Frontend: http://localhost:3000
 
 1. Activează API pe Mikrotik (port 8728)
 2. Creează user API cu permisiuni
-3. Setează în `.env`: `MIKROTIK_HOST`, `MIKROTIK_USER`, `MIKROTIK_PASS`
+3. Setează în `.env`: `ROUTER_IPS`, `ROUTER_USERNAME`, `ROUTER_PASSWORD`, `SCAN_INTERVAL_SECONDS`
