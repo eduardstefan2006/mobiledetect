@@ -23,8 +23,9 @@ Frontend: http://localhost:3000
 ## API Endpoints
 
 ### Devices
-- `GET /api/devices` — Lista dispozitive
+- `GET /api/devices` — Lista dispozitive (`phones_only=true` pentru doar mobile)
 - `GET /api/devices/{id}` — Detalii dispozitiv
+- `POST /api/devices/re-evaluate-phones` — Re-evaluează în masă flag-ul `is_phone`
 - `POST /api/devices/scan` — Scan Mikrotik
 
 ### Health
