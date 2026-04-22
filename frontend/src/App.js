@@ -122,18 +122,21 @@ function App() {
     const seenDeviceKeys = new Set();
     const deduplicated = [];
     for (const device of sorted) {
-      const key = (device.hostname || device.vendor || device.mac_address || '').toLowerCase().trim();
-      if (!key) {
-        deduplicated.push(device);
+      const hostname = (device.hostname || '').toLowerCase().trim();
+      const macAddress = (device.mac_address || '').toLowerCase().trim();
+      const key = hostname ? `host:${hostname}` : `mac:${macAddress}`;
+
+      if (!key || key === 'mac:') {
         continue;
       }
+
       if (!seenDeviceKeys.has(key)) {
         seenDeviceKeys.add(key);
         deduplicated.push(device);
       }
     }
 
-    return deduplicated.slice(0, 20);
+    return deduplicated.slice(0, 30);
   }, [devices]);
 
   return (

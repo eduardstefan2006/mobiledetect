@@ -201,7 +201,7 @@ function Dashboard({ locationSummaries, devices, recentActivity, loading, locati
                   role="button"
                 >
                   <td>{device.mac_address}</td>
-                  <td>{device.hostname || device.vendor || '-'}</td>
+                  <td>{device.hostname || device.vendor || (device.is_phone ? '📱 Telefon (MAC privat)' : '-')}</td>
                   <td>{device.latest_network?.ip_address || '-'}</td>
                   <td>{device.latest_network?.vlan || '-'}</td>
                   <td>{getDeviceLocationName(device, locations) || '-'}</td>
