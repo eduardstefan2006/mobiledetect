@@ -3,12 +3,12 @@ from __future__ import annotations
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session, joinedload
 
 from database import get_db
 from detection import is_phone_device
-from models import Alert, ConnectionLog, Device
+from models import Alert, ConnectionLog, Device, DeviceIP
 
 router = APIRouter()
 
@@ -65,6 +65,55 @@ def re_evaluate_phone_flags(db: Session = Depends(get_db)) -> dict:
             updated += 1
     db.commit()
     return {"updated": updated, "total": total}
+
+
+@router.post("/devices/merge-duplicates")
+def merge_duplicate_devices(db: Session = Depends(get_db)) -> dict:
+    duplicate_hostnames = db.execute(
+        select(func.lower(Device.hostname).label("hostname_key"))
+        .where(Device.hostname.is_not(None))
+        .group_by(func.lower(Device.hostname))
+        .having(func.count(Device.id) > 1)
+    ).all()
+
+    merged = 0
+    for row in duplicate_hostnames:
+        hostname_key = row.hostname_key
+        devices_with_hostname = db.scalars(
+            select(Device)
+            .where(func.lower(Device.hostname) == hostname_key)
+            .order_by(Device.seen_count.desc(), Device.last_seen.desc())
+        ).all()
+
+        if len(devices_with_hostname) < 2:
+            continue
+
+        primary = devices_with_hostname[0]
+        duplicates = devices_with_hostname[1:]
+
+        for duplicate in duplicates:
+            db.execute(
+                update(DeviceIP)
+                .where(DeviceIP.device_id == duplicate.id)
+                .values(device_id=primary.id)
+            )
+            db.execute(
+                update(ConnectionLog)
+                .where(ConnectionLog.mac_address == duplicate.mac_address)
+                .values(mac_address=primary.mac_address)
+            )
+
+            primary.seen_count += duplicate.seen_count
+            if duplicate.last_seen and (not primary.last_seen or duplicate.last_seen > primary.last_seen):
+                primary.last_seen = duplicate.last_seen
+            if duplicate.first_seen and (not primary.first_seen or duplicate.first_seen < primary.first_seen):
+                primary.first_seen = duplicate.first_seen
+
+            db.delete(duplicate)
+            merged += 1
+
+    db.commit()
+    return {"merged": merged}
 
 
 @router.get("/devices/{mac}")
