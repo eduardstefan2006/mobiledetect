@@ -158,6 +158,7 @@ function App() {
               recentActivity={recentActivity}
               loading={isInitialLoading}
               locations={LOCATIONS}
+              onSelectDevice={setSelectedMac}
             />
           )}
           {activePage === 'devices' && (
