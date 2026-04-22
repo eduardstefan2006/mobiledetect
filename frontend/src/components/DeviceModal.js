@@ -51,10 +51,6 @@ function DeviceModal({ macAddress, isOpen, onClose, apiUrl, locations }) {
     () => (Array.isArray(device?.connection_logs) ? device.connection_logs : []),
     [device?.connection_logs],
   );
-  const lastDisconnectedAt = useMemo(
-    () => connectionLogs.find((log) => log.event_type === 'disconnected')?.timestamp || null,
-    [connectionLogs],
-  );
 
   if (!isOpen) return null;
 
@@ -81,12 +77,17 @@ function DeviceModal({ macAddress, isOpen, onClose, apiUrl, locations }) {
               <p><strong>IP curent:</strong> {device.latest_network?.ip_address || '-'}</p>
               <p><strong>Locație:</strong> {location?.name || '-'}</p>
               <p><strong>VLAN:</strong> {device.latest_network?.vlan || '-'}</p>
-              <p><strong>Status:</strong> {device.is_offline ? 'Offline' : 'Online'}</p>
+              <p>
+                <strong>Status:</strong>{' '}
+                {device.is_offline
+                  ? <span style={{ color: '#ef4444' }}>🔴 Offline{device.disconnected_at ? ` · deconectat la ${formatTimestamp(device.disconnected_at)}` : ''}</span>
+                  : <span style={{ color: '#10b981' }}>🟢 Online{device.connected_at ? ` · conectat la ${formatTimestamp(device.connected_at)}` : ''}</span>
+                }
+              </p>
               <p><strong>Tip:</strong> {device.is_phone ? 'Telefon' : 'Alt dispozitiv'}</p>
               <p><strong>De încredere:</strong> {device.is_trusted ? 'Da' : 'Nu'}</p>
               <p><strong>Prima apariție:</strong> {formatTimestamp(device.first_seen)}</p>
               <p><strong>Ultima apariție:</strong> {formatTimestamp(device.last_seen)}</p>
-              <p><strong>Ultima deconectare:</strong> {formatTimestamp(lastDisconnectedAt)}</p>
               <p><strong>Seen count:</strong> {device.seen_count || 0}</p>
             </div>
 

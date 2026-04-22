@@ -114,6 +114,7 @@ def _create_alert(mac: str, alert_type: str, message: str) -> Alert:
 
 def process_scan_results(records: list[dict[str, Any]]) -> None:
     now = datetime.now(timezone.utc)
+    scanned_macs = {rec["mac_address"] for rec in records}
     with db_session() as session:
         was_offline = {d.mac_address: d.is_offline for d in session.scalars(select(Device)).all()}
         for rec in records:
@@ -265,21 +266,24 @@ def process_scan_results(records: list[dict[str, Any]]) -> None:
 
         devices = session.scalars(select(Device)).all()
         for device in devices:
-            device.refresh_offline_status()
-        for device in devices:
-            if not was_offline.get(device.mac_address, True) and device.is_offline:
-                latest_ip = device.ips[0] if device.ips else None
-                session.add(
-                    ConnectionLog(
-                        mac_address=device.mac_address,
-                        event_type="disconnected",
-                        ip_address=latest_ip.ip_address if latest_ip else None,
-                        vlan=latest_ip.vlan if latest_ip else None,
-                        router_ip=latest_ip.router_ip if latest_ip else None,
-                        hostname=device.hostname,
-                        timestamp=now,
+            if device.mac_address not in scanned_macs:
+                previously_offline = was_offline.get(device.mac_address, False)
+                device.is_offline = True
+                if not previously_offline:
+                    latest_ip = device.ips[0] if device.ips else None
+                    session.add(
+                        ConnectionLog(
+                            mac_address=device.mac_address,
+                            event_type="disconnected",
+                            ip_address=latest_ip.ip_address if latest_ip else None,
+                            vlan=latest_ip.vlan if latest_ip else None,
+                            router_ip=latest_ip.router_ip if latest_ip else None,
+                            hostname=device.hostname,
+                            timestamp=now,
+                        )
                     )
-                )
+            else:
+                device.refresh_offline_status()
 
 
 async def scan_once(scanner: MikroTikScanner) -> None:

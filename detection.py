@@ -242,7 +242,7 @@ def is_phone_device(
         if v and not any(k in v for k in MOBILE_VENDOR_KEYWORDS):
             return False
         if not h and not v:
-            return True
+            return False
 
     return False
 

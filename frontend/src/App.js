@@ -83,10 +83,19 @@ function App() {
   );
 
   const totals = useMemo(() => {
-    const online = devices.filter((device) => !device.is_offline).length;
-    const phones = devices.filter((device) => device.is_phone).length;
+    const seen = new Set();
+    const deduped = [];
+    for (const device of devices) {
+      const key = device.hostname ? `h:${device.hostname.toLowerCase()}` : `m:${device.mac_address}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        deduped.push(device);
+      }
+    }
+    const online = deduped.filter((d) => !d.is_offline).length;
+    const phones = deduped.filter((d) => d.is_phone).length;
     return {
-      total: devices.length,
+      total: deduped.length,
       online,
       phones,
       alerts: unresolvedAlerts.length,
