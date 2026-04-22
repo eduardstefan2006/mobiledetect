@@ -92,9 +92,6 @@ MOBILE_VENDOR_KEYWORDS = (
     "alcatel",
     "wiko",
     "meizu",
-    "asus",
-    "lenovo",
-    "acer",
 )
 
 NON_MOBILE_HOSTNAME_PATTERNS = (
@@ -104,6 +101,53 @@ NON_MOBILE_HOSTNAME_PATTERNS = (
     "pc-",
     "desktop-",
     "laptop-",
+    # Apple laptops
+    "macbook",
+    # ASUS laptops
+    "vivobook",
+    "zenbook",
+    "rog-",
+    "tuf-",
+    "expertbook",
+    # Lenovo laptops
+    "thinkpad",
+    "ideapad",
+    "yoga",
+    "legion",
+    # Dell laptops
+    "latitude",
+    "inspiron",
+    "xps-",
+    "vostro",
+    "alienware",
+    # HP laptops
+    "pavilion",
+    "elitebook",
+    "probook",
+    "spectre",
+    "envy-",
+    "omen-",
+    "zbook",
+    # Huawei laptops
+    "matebook",
+    # Microsoft
+    "surface-",
+    # Acer laptops
+    "swift-",
+    "aspire",
+    "nitro-",
+    # Other laptops
+    "chromebook",
+    "gram-",
+    # Printers
+    "canon",
+    "epson",
+    "kyocera",
+    "ricoh",
+    "brother-",
+    "xerox",
+    "konica",
+    "lexmark",
     "printer",
     "camera",
     "nvr",
