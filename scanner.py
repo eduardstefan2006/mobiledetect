@@ -11,7 +11,14 @@ import routeros_api.api_structure as _api_structure
 from sqlalchemy import select
 
 from database import db_session
-from detection import deduplicate_records, is_phone_device, normalize_hostname, normalize_mac
+from detection import (
+    deduplicate_records,
+    is_phone_device,
+    normalize_hostname,
+    normalize_mac,
+    vendor_from_client_id,
+    vendor_from_oui,
+)
 from models import Alert, ConnectionLog, Device, DeviceIP
 
 logger = logging.getLogger(__name__)
@@ -82,9 +89,13 @@ class MikroTikScanner:
             if not mac:
                 continue
             hostname = normalize_hostname(lease.get("host-name"))
+            client_id = lease.get("client-id") or lease.get("active-client-id")
             ip = lease.get("address") or arp_by_mac.get(mac)
             if not ip:
                 continue
+            oui_vendor = vendor_from_oui(mac)
+            dhcp_vendor = vendor_from_client_id(client_id)
+            vendor = oui_vendor or dhcp_vendor
             results.append(
                 {
                     "mac_address": mac,
@@ -92,7 +103,8 @@ class MikroTikScanner:
                     "hostname": hostname,
                     "dhcp_server": lease.get("server"),
                     "router_ip": router_ip,
-                    "vendor": None,
+                    "vendor": vendor,
+                    "client_id": client_id,
                 }
             )
         return results

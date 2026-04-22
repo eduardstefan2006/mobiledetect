@@ -186,7 +186,14 @@ function Devices({ devices, loading, locations, onSelectDevice }) {
                       </span>
                     </td>
                     <td>{device.mac_address}</td>
-                    <td>{device.hostname || device.vendor || '-'}</td>
+                    <td>
+                      {device.hostname
+                        ? device.hostname
+                        : device.vendor
+                          ? (device.is_phone ? `📱 ${device.vendor}` : device.vendor)
+                          : (device.is_phone ? '📱' : '-')
+                      }
+                    </td>
                     <td>{device.latest_network?.ip_address || '-'}</td>
                     <td>
                       {location ? (
