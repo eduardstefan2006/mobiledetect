@@ -47,8 +47,8 @@ function Dashboard({ locationSummaries, devices, recentActivity, loading, locati
 
   const filteredActivity = useMemo(() => {
     let result = locationFilter === 'all'
-      ? [...devices]
-      : devices.filter((device) => device.latest_network?.router_ip === locationFilter);
+      ? [...recentActivity]
+      : recentActivity.filter((device) => device.latest_network?.router_ip === locationFilter);
 
     result.sort((a, b) => {
       let aVal;
@@ -73,7 +73,7 @@ function Dashboard({ locationSummaries, devices, recentActivity, loading, locati
     });
 
     return result.slice(0, 20);
-  }, [devices, locationFilter, sortKey, sortDirection, locations]);
+  }, [recentActivity, locationFilter, sortKey, sortDirection, locations]);
 
   const onSort = (key) => {
     if (sortKey === key) {
@@ -176,6 +176,7 @@ function Dashboard({ locationSummaries, devices, recentActivity, loading, locati
                 <th onClick={() => onSort('ip')} className="sortable">
                   IP {sortKey === 'ip' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
                 </th>
+                <th>VLAN</th>
                 <th onClick={() => onSort('location')} className="sortable">
                   Locație {sortKey === 'location' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
                 </th>
@@ -202,13 +203,14 @@ function Dashboard({ locationSummaries, devices, recentActivity, loading, locati
                   <td>{device.mac_address}</td>
                   <td>{device.hostname || device.vendor || '-'}</td>
                   <td>{device.latest_network?.ip_address || '-'}</td>
+                  <td>{device.latest_network?.vlan || '-'}</td>
                   <td>{getDeviceLocationName(device, locations) || '-'}</td>
                   <td>{formatTimestamp(device.last_seen)}</td>
                 </tr>
               ))}
               {filteredActivity.length === 0 && (
                 <tr>
-                  <td colSpan="5" className="empty-state">Nu există activitate recentă.</td>
+                  <td colSpan="6" className="empty-state">Nu există activitate recentă.</td>
                 </tr>
               )}
             </tbody>

@@ -115,9 +115,25 @@ function App() {
   }, [devices]);
 
   const recentActivity = useMemo(() => {
-    return [...devices]
-      .sort((a, b) => new Date(b.last_seen || 0).getTime() - new Date(a.last_seen || 0).getTime())
-      .slice(0, 10);
+    const sorted = [...devices].sort(
+      (a, b) => new Date(b.last_seen || 0).getTime() - new Date(a.last_seen || 0).getTime(),
+    );
+
+    const seenDeviceKeys = new Set();
+    const deduplicated = [];
+    for (const device of sorted) {
+      const key = (device.hostname || device.vendor || device.mac_address || '').toLowerCase().trim();
+      if (!key) {
+        deduplicated.push(device);
+        continue;
+      }
+      if (!seenDeviceKeys.has(key)) {
+        seenDeviceKeys.add(key);
+        deduplicated.push(device);
+      }
+    }
+
+    return deduplicated.slice(0, 20);
   }, [devices]);
 
   return (
