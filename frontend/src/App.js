@@ -206,7 +206,12 @@ function App() {
             />
           )}
           {activePage === 'alerts' && (
-            <Alerts alerts={alerts} loading={isInitialLoading} />
+            <Alerts
+              alerts={alerts}
+              loading={isInitialLoading}
+              apiUrl={API_URL}
+              onRefresh={fetchData}
+            />
           )}
           {activePage === 'locations' && (
             <Locations
