@@ -229,6 +229,31 @@ def get_alerts(db: Session = Depends(get_db)) -> list[dict]:
     ]
 
 
+@router.post("/alerts/{alert_id}/resolve")
+def resolve_alert(alert_id: int, db: Session = Depends(get_db)) -> dict:
+    alert = db.scalar(select(Alert).where(Alert.id == alert_id))
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+
+    if alert.is_resolved:
+        return {"id": alert.id, "resolved": False, "already_resolved": True}
+
+    alert.is_resolved = True
+    db.commit()
+    return {"id": alert.id, "resolved": True, "already_resolved": False}
+
+
+@router.post("/alerts/resolve-all")
+def resolve_all_alerts(db: Session = Depends(get_db)) -> dict:
+    result = db.execute(
+        update(Alert)
+        .where(Alert.is_resolved.is_(False))
+        .values(is_resolved=True)
+    )
+    db.commit()
+    return {"resolved": True, "updated_count": result.rowcount or 0}
+
+
 @router.get("/logs")
 def get_connection_logs(
     mac: Optional[str] = None,

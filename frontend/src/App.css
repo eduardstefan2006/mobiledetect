@@ -447,6 +447,17 @@ tbody tr:hover {
   align-items: center;
 }
 
+.alert-actions-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.alert-item-bottom {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
 .empty-alerts {
   text-align: center;
   padding: 40px 20px;
