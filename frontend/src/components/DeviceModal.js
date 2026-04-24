@@ -52,6 +52,11 @@ function DeviceModal({ macAddress, isOpen, onClose, apiUrl, locations }) {
     [device?.connection_logs],
   );
 
+  const dailyHistory = useMemo(
+    () => (Array.isArray(device?.daily_history_30d) ? device.daily_history_30d : []),
+    [device?.daily_history_30d],
+  );
+
   if (!isOpen) return null;
 
   const location = locations[device?.latest_network?.router_ip];
@@ -123,6 +128,58 @@ function DeviceModal({ macAddress, isOpen, onClose, apiUrl, locations }) {
                   {!connectionLogs.length && (
                     <tr>
                       <td colSpan="5" className="empty-state">Nu există istoric disponibil.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <h4>Activitate ultimele 30 zile</h4>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Dată</th>
+                    <th>Evenimente</th>
+                    <th>IP-uri</th>
+                    <th>VLAN-uri</th>
+                    <th>Locație</th>
+                    <th>Prima activitate</th>
+                    <th>Ultima activitate</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dailyHistory.map((day) => {
+                    const inactive = day.events_count === 0;
+                    const [year, month, dayNum] = day.date.split('-');
+                    const dateFormatted = `${dayNum}.${month}.${year}`;
+                    return (
+                      <tr
+                        key={day.date}
+                        style={inactive ? { color: 'var(--text-secondary)', fontStyle: 'italic' } : undefined}
+                      >
+                        <td>{dateFormatted}</td>
+                        <td>
+                          {inactive
+                            ? '—'
+                            : <span className="badge success">{day.events_count}</span>
+                          }
+                        </td>
+                        <td>{day.ips_seen.length ? day.ips_seen.join(', ') : '—'}</td>
+                        <td>{day.vlans_seen.length ? day.vlans_seen.join(', ') : '—'}</td>
+                        <td>
+                          {day.routers_seen.length
+                            ? day.routers_seen.map((ip) => locations[ip]?.name || ip).join(', ')
+                            : '—'}
+                        </td>
+                        <td>{day.first_event ? formatTimestamp(day.first_event) : '—'}</td>
+                        <td>{day.last_event ? formatTimestamp(day.last_event) : '—'}</td>
+                      </tr>
+                    );
+                  })}
+                  {!dailyHistory.length && (
+                    <tr>
+                      <td colSpan="7" className="empty-state">Nu există date disponibile.</td>
                     </tr>
                   )}
                 </tbody>

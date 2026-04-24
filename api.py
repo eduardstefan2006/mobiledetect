@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -192,6 +192,72 @@ def get_device(mac: str, db: Session = Depends(get_db)) -> dict:
         for log in logs
     ]
 
+    today = datetime.now(tz=timezone.utc).date()
+    thirty_days_ago = today - timedelta(days=29)
+    start_dt = datetime(thirty_days_ago.year, thirty_days_ago.month, thirty_days_ago.day, tzinfo=timezone.utc)
+
+    logs_30d = db.scalars(
+        select(ConnectionLog)
+        .where(
+            ConnectionLog.mac_address == mac.lower(),
+            ConnectionLog.timestamp >= start_dt,
+        )
+        .order_by(ConnectionLog.timestamp.asc())
+    ).all()
+
+    daily_map: dict[date, dict] = {}
+    for log in logs_30d:
+        ts = log.timestamp
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        day = ts.astimezone(timezone.utc).date()
+        if day not in daily_map:
+            daily_map[day] = {
+                "ips_seen": set(),
+                "vlans_seen": set(),
+                "routers_seen": set(),
+                "events_count": 0,
+                "first_event": ts,
+                "last_event": ts,
+            }
+        entry = daily_map[day]
+        entry["events_count"] += 1
+        if log.ip_address:
+            entry["ips_seen"].add(log.ip_address)
+        if log.vlan:
+            entry["vlans_seen"].add(log.vlan)
+        if log.router_ip:
+            entry["routers_seen"].add(log.router_ip)
+        if ts < entry["first_event"]:
+            entry["first_event"] = ts
+        if ts > entry["last_event"]:
+            entry["last_event"] = ts
+
+    daily_history_30d = []
+    for i in range(30):
+        day = today - timedelta(days=i)
+        entry = daily_map.get(day)
+        if entry:
+            daily_history_30d.append({
+                "date": day.isoformat(),
+                "events_count": entry["events_count"],
+                "ips_seen": sorted(entry["ips_seen"]),
+                "vlans_seen": sorted(entry["vlans_seen"]),
+                "routers_seen": sorted(entry["routers_seen"]),
+                "first_event": entry["first_event"].isoformat(),
+                "last_event": entry["last_event"].isoformat(),
+            })
+        else:
+            daily_history_30d.append({
+                "date": day.isoformat(),
+                "events_count": 0,
+                "ips_seen": [],
+                "vlans_seen": [],
+                "routers_seen": [],
+                "first_event": None,
+                "last_event": None,
+            })
+
     return {
         "mac_address": device.mac_address,
         "vendor": device.vendor,
@@ -207,6 +273,7 @@ def get_device(mac: str, db: Session = Depends(get_db)) -> dict:
         "disconnected_at": disconnected_map.get(device.mac_address),
         "history": history,
         "connection_logs": connection_logs,
+        "daily_history_30d": daily_history_30d,
     }
 
 
