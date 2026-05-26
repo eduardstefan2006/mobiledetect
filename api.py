@@ -62,12 +62,13 @@ def _connection_timestamp_maps(
 @router.get("/devices")
 def get_devices(phones_only: bool = False, db: Session = Depends(get_db)) -> list[dict]:
     query = select(Device).options(joinedload(Device.ips)).order_by(Device.last_seen.desc())
-    if phones_only:
-        query = query.where(Device.is_phone.is_(True))
     devices = db.scalars(query).unique().all()
     connected_map, disconnected_map = _connection_timestamp_maps(db)
     response = []
     for device in devices:
+        derived_is_phone = is_phone_device(device.hostname, device.vendor, device.mac_address)
+        if phones_only and not derived_is_phone:
+            continue
         response.append(
             {
                 "mac_address": device.mac_address,
@@ -78,7 +79,7 @@ def get_devices(phones_only: bool = False, db: Session = Depends(get_db)) -> lis
                 "seen_count": device.seen_count,
                 "is_trusted": device.is_trusted,
                 "is_offline": device.is_offline,
-                "is_phone": device.is_phone,
+                "is_phone": derived_is_phone,
                 "latest_network": _latest_ip_payload(device),
                 "connected_at": connected_map.get(device.mac_address),
                 "disconnected_at": disconnected_map.get(device.mac_address),
@@ -281,7 +282,7 @@ def get_device(mac: str, db: Session = Depends(get_db)) -> dict:
         "seen_count": device.seen_count,
         "is_trusted": device.is_trusted,
         "is_offline": device.is_offline,
-        "is_phone": device.is_phone,
+        "is_phone": is_phone_device(device.hostname, device.vendor, device.mac_address),
         "latest_network": _latest_ip_payload(device),
         "connected_at": connected_map.get(device.mac_address),
         "disconnected_at": disconnected_map.get(device.mac_address),
