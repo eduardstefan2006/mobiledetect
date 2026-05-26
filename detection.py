@@ -361,6 +361,8 @@ def vendor_from_client_id(client_id: str | None) -> str | None:
     cid = client_id.lower().strip()
     if "apple" in cid:
         return "Apple"
+    if "iphone" in cid or "ios" in cid:
+        return "Apple"
     if "android" in cid:
         return "Android"
     if "samsung" in cid:

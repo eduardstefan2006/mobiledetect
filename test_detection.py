@@ -1,9 +1,12 @@
 import unittest
 
-from detection import deduplicate_records, is_phone_device
+from detection import deduplicate_records, is_phone_device, vendor_from_client_id
 
 
 class IsPhoneDeviceTests(unittest.TestCase):
+    def test_vendor_from_client_id_detects_iphone(self) -> None:
+        self.assertEqual(vendor_from_client_id("iPhone"), "Apple")
+
     def test_detects_phone_from_hostname(self) -> None:
         self.assertTrue(is_phone_device("my-iphone", None))
 

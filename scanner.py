@@ -37,6 +37,16 @@ def _safe_get_python_value(self, value: bytes) -> str:
 
 _api_structure.StringField.get_python_value = _safe_get_python_value
 
+
+def _first_non_empty(*values: Any) -> str | None:
+    for value in values:
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text:
+            return text
+    return None
+
 ROUTERS = [
     r.strip()
     for r in os.getenv(
@@ -88,8 +98,14 @@ class MikroTikScanner:
             mac = normalize_mac(lease.get("mac-address"))
             if not mac:
                 continue
-            hostname = normalize_hostname(lease.get("host-name"))
-            client_id = lease.get("client-id") or lease.get("active-client-id")
+            hostname = normalize_hostname(
+                _first_non_empty(
+                    lease.get("host-name"),
+                    lease.get("active-host-name"),
+                    lease.get("comment"),
+                )
+            )
+            client_id = _first_non_empty(lease.get("client-id"), lease.get("active-client-id"))
             ip = lease.get("address") or arp_by_mac.get(mac)
             if not ip:
                 continue
