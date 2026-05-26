@@ -95,7 +95,7 @@ class MikroTikScanner:
 
         results: list[dict[str, Any]] = []
         for lease in leases:
-            mac = normalize_mac(lease.get("mac-address"))
+            mac = normalize_mac(_first_non_empty(lease.get("active-mac-address"), lease.get("mac-address")))
             if not mac:
                 continue
             hostname = normalize_hostname(
@@ -106,7 +106,7 @@ class MikroTikScanner:
                 )
             )
             client_id = _first_non_empty(lease.get("client-id"), lease.get("active-client-id"))
-            ip = lease.get("address") or arp_by_mac.get(mac)
+            ip = _first_non_empty(lease.get("active-address"), lease.get("address")) or arp_by_mac.get(mac)
             if not ip:
                 continue
             oui_vendor = vendor_from_oui(mac)
