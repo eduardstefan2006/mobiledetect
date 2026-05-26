@@ -198,9 +198,29 @@ def process_scan_results(records: list[dict[str, Any]]) -> None:
 
             existing.last_seen = now
             existing.seen_count += 1
-            existing.hostname = existing.hostname or hostname
-            existing.vendor = existing.vendor or vendor
-            existing.is_phone = is_phone_device(existing.hostname or hostname, existing.vendor or vendor, mac)
+
+            current_hostname = existing.hostname
+            current_vendor = existing.vendor
+
+            current_score = (
+                int(is_phone_device(current_hostname, current_vendor, mac)),
+                int(bool((current_vendor or "").strip())),
+                int(bool((current_hostname or "").strip())),
+            )
+            incoming_score = (
+                int(is_phone_device(hostname, vendor, mac)),
+                int(bool((vendor or "").strip())),
+                int(bool((hostname or "").strip())),
+            )
+
+            if incoming_score > current_score:
+                existing.hostname = hostname or existing.hostname
+                existing.vendor = vendor or existing.vendor
+            else:
+                existing.hostname = existing.hostname or hostname
+                existing.vendor = existing.vendor or vendor
+
+            existing.is_phone = is_phone_device(existing.hostname, existing.vendor, mac)
             existing.is_trusted = existing.seen_count > 20
             existing.refresh_offline_status()
             if was_offline.get(mac, False) and not existing.is_offline:
