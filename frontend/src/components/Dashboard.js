@@ -20,6 +20,13 @@ const ipToNumber = (ip) => {
   if (parts.some((part) => part < 0 || part > 255)) return -1;
   return parts.reduce((total, part) => (total << 8) + part, 0);
 };
+const dedupeKey = (device) => {
+  if (device.hostname) {
+    const routerIp = device.latest_network?.router_ip || 'unknown';
+    return `h:${device.hostname.toLowerCase()}@${routerIp}`;
+  }
+  return `m:${device.mac_address}`;
+};
 
 function Dashboard({ locationSummaries, devices, loading, locations, onSelectDevice }) {
   const [locationFilter, setLocationFilter] = useState('all');
@@ -54,7 +61,7 @@ function Dashboard({ locationSummaries, devices, loading, locations, onSelectDev
     const seen = new Set();
     const deduped = [];
     for (const device of sortedByActivity) {
-      const key = device.hostname ? `h:${device.hostname.toLowerCase()}` : `m:${device.mac_address}`;
+      const key = dedupeKey(device);
       if (!seen.has(key)) {
         seen.add(key);
         deduped.push(device);

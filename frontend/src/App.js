@@ -28,6 +28,13 @@ const PAGE_TITLES = {
 };
 
 const toArray = (value) => (Array.isArray(value) ? value : []);
+const dedupeKey = (device) => {
+  if (device.hostname) {
+    const routerIp = device.latest_network?.router_ip || 'unknown';
+    return `h:${device.hostname.toLowerCase()}@${routerIp}`;
+  }
+  return `m:${device.mac_address}`;
+};
 
 export const formatRelativeTime = formatTimestamp;
 
@@ -86,7 +93,7 @@ function App() {
     const seen = new Set();
     const deduped = [];
     for (const device of devices) {
-      const key = device.hostname ? `h:${device.hostname.toLowerCase()}` : `m:${device.mac_address}`;
+      const key = dedupeKey(device);
       if (!seen.has(key)) {
         seen.add(key);
         deduped.push(device);
@@ -113,7 +120,7 @@ function App() {
       const seen = new Set();
       const locationDevices = [];
       for (const device of sortedByActivity) {
-        const key = device.hostname ? `h:${device.hostname.toLowerCase()}` : `m:${device.mac_address}`;
+        const key = dedupeKey(device);
         if (!seen.has(key)) {
           seen.add(key);
           locationDevices.push(device);
@@ -146,7 +153,7 @@ function App() {
     const seen = new Set();
     const result = [];
     for (const device of sorted) {
-      const key = device.hostname ? `h:${device.hostname.toLowerCase()}` : `m:${device.mac_address}`;
+      const key = dedupeKey(device);
       if (!seen.has(key)) {
         seen.add(key);
         result.push(device);

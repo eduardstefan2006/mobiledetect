@@ -8,6 +8,13 @@ const quickFilters = [
   { key: 'phones', label: 'Telefoane' },
   { key: 'trusted', label: 'De încredere' },
 ];
+const dedupeKey = (device) => {
+  if (device.hostname) {
+    const routerIp = device.latest_network?.router_ip || 'unknown';
+    return `h:${device.hostname.toLowerCase()}@${routerIp}`;
+  }
+  return `m:${device.mac_address}`;
+};
 
 function Devices({ devices, loading, locations, onSelectDevice }) {
   const [search, setSearch] = useState('');
@@ -87,7 +94,7 @@ function Devices({ devices, loading, locations, onSelectDevice }) {
     const dedupedResult = [];
     const seenHostnames = new Set();
     for (const device of sortedResult) {
-      const key = device.hostname ? `h:${device.hostname.toLowerCase()}` : `m:${device.mac_address}`;
+      const key = dedupeKey(device);
       if (!seenHostnames.has(key)) {
         seenHostnames.add(key);
         dedupedResult.push(device);
