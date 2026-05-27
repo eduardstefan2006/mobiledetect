@@ -1,9 +1,12 @@
 import unittest
 
-from detection import is_phone_device
+from detection import deduplicate_records, is_phone_device, vendor_from_client_id
 
 
 class IsPhoneDeviceTests(unittest.TestCase):
+    def test_vendor_from_client_id_detects_iphone(self) -> None:
+        self.assertEqual(vendor_from_client_id("iPhone"), "Apple")
+
     def test_detects_phone_from_hostname(self) -> None:
         self.assertTrue(is_phone_device("my-iphone", None))
 
@@ -59,6 +62,31 @@ class IsPhoneDeviceTests(unittest.TestCase):
 
     def test_does_not_detect_phone_from_globally_administered_mac_without_other_signals(self) -> None:
         self.assertFalse(is_phone_device(None, None, "00:11:22:33:44:55"))
+
+    def test_deduplicate_prefers_record_with_phone_signals(self) -> None:
+        records = [
+            {
+                "mac_address": "02:11:22:33:44:55",
+                "ip_address": "192.168.5.10",
+                "hostname": "iPhone-de-Matei",
+                "vendor": None,
+                "router_ip": "192.168.5.1",
+                "dhcp_server": "vlan10",
+            },
+            {
+                "mac_address": "7a:aa:bb:cc:dd:ee",
+                "ip_address": "192.168.5.11",
+                "hostname": "iPhone-de-Matei",
+                "vendor": "Apple",
+                "router_ip": "192.168.4.1",
+                "dhcp_server": "vlan10",
+            },
+        ]
+
+        merged = deduplicate_records(records)
+        self.assertEqual(len(merged), 1)
+        self.assertEqual(merged[0]["hostname"], "iPhone-de-Matei")
+        self.assertEqual(merged[0]["vendor"], "Apple")
 
 
 if __name__ == "__main__":

@@ -62,12 +62,13 @@ def _connection_timestamp_maps(
 @router.get("/devices")
 def get_devices(phones_only: bool = False, db: Session = Depends(get_db)) -> list[dict]:
     query = select(Device).options(joinedload(Device.ips)).order_by(Device.last_seen.desc())
-    if phones_only:
-        query = query.where(Device.is_phone.is_(True))
     devices = db.scalars(query).unique().all()
     connected_map, disconnected_map = _connection_timestamp_maps(db)
     response = []
     for device in devices:
+        derived_is_phone = is_phone_device(device.hostname, device.vendor, device.mac_address)
+        if phones_only and not derived_is_phone:
+            continue
         response.append(
             {
                 "mac_address": device.mac_address,
@@ -78,7 +79,7 @@ def get_devices(phones_only: bool = False, db: Session = Depends(get_db)) -> lis
                 "seen_count": device.seen_count,
                 "is_trusted": device.is_trusted,
                 "is_offline": device.is_offline,
-                "is_phone": device.is_phone,
+                "is_phone": derived_is_phone,
                 "latest_network": _latest_ip_payload(device),
                 "connected_at": connected_map.get(device.mac_address),
                 "disconnected_at": disconnected_map.get(device.mac_address),
@@ -106,6 +107,14 @@ def re_evaluate_phone_flags(db: Session = Depends(get_db)) -> dict:
 
 @router.post("/devices/merge-duplicates")
 def merge_duplicate_devices(db: Session = Depends(get_db)) -> dict:
+    def _device_quality(device: Device) -> tuple[int, int, int, int]:
+        return (
+            int(is_phone_device(device.hostname, device.vendor, device.mac_address)),
+            int(bool((device.vendor or "").strip())),
+            int(bool((device.hostname or "").strip())),
+            int(device.seen_count or 0),
+        )
+
     duplicate_hostnames = db.execute(
         select(func.lower(Device.hostname).label("hostname_key"))
         .where(Device.hostname.is_not(None))
@@ -125,8 +134,8 @@ def merge_duplicate_devices(db: Session = Depends(get_db)) -> dict:
         if len(devices_with_hostname) < 2:
             continue
 
-        primary = devices_with_hostname[0]
-        duplicates = devices_with_hostname[1:]
+        primary = max(devices_with_hostname, key=_device_quality)
+        duplicates = [d for d in devices_with_hostname if d.id != primary.id]
 
         for duplicate in duplicates:
             db.execute(
@@ -146,8 +155,14 @@ def merge_duplicate_devices(db: Session = Depends(get_db)) -> dict:
             if duplicate.first_seen and (not primary.first_seen or duplicate.first_seen < primary.first_seen):
                 primary.first_seen = duplicate.first_seen
 
+            if _device_quality(duplicate) > _device_quality(primary):
+                primary.hostname = duplicate.hostname or primary.hostname
+                primary.vendor = duplicate.vendor or primary.vendor
+
             db.delete(duplicate)
             merged += 1
+
+        primary.is_phone = is_phone_device(primary.hostname, primary.vendor, primary.mac_address)
 
     db.commit()
     return {"merged": merged}
@@ -267,7 +282,7 @@ def get_device(mac: str, db: Session = Depends(get_db)) -> dict:
         "seen_count": device.seen_count,
         "is_trusted": device.is_trusted,
         "is_offline": device.is_offline,
-        "is_phone": device.is_phone,
+        "is_phone": is_phone_device(device.hostname, device.vendor, device.mac_address),
         "latest_network": _latest_ip_payload(device),
         "connected_at": connected_map.get(device.mac_address),
         "disconnected_at": disconnected_map.get(device.mac_address),
