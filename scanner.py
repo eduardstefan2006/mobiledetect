@@ -47,6 +47,25 @@ def _first_non_empty(*values: Any) -> str | None:
             return text
     return None
 
+
+def _select_best_hostname(*candidates: Any, vendor: str | None = None, mac: str | None = None) -> str | None:
+    normalized_candidates = [
+        normalize_hostname(str(value))
+        for value in candidates
+        if value is not None and str(value).strip()
+    ]
+    if not normalized_candidates:
+        return None
+
+    def score(name: str) -> tuple[int, int]:
+        # Prefer hostname variants that are more likely to classify correctly as phones.
+        return (
+            int(is_phone_device(name, vendor, mac)),
+            len(name),
+        )
+
+    return max(normalized_candidates, key=score)
+
 ROUTERS = [
     r.strip()
     for r in os.getenv(
@@ -98,12 +117,12 @@ class MikroTikScanner:
             mac = normalize_mac(_first_non_empty(lease.get("active-mac-address"), lease.get("mac-address")))
             if not mac:
                 continue
-            hostname = normalize_hostname(
-                _first_non_empty(
-                    lease.get("host-name"),
-                    lease.get("active-host-name"),
-                    lease.get("comment"),
-                )
+            hostname = _select_best_hostname(
+                lease.get("host-name"),
+                lease.get("active-host-name"),
+                lease.get("comment"),
+                vendor=None,
+                mac=mac,
             )
             client_id = _first_non_empty(lease.get("client-id"), lease.get("active-client-id"))
             ip = _first_non_empty(lease.get("active-address"), lease.get("address")) or arp_by_mac.get(mac)
@@ -112,6 +131,14 @@ class MikroTikScanner:
             oui_vendor = vendor_from_oui(mac)
             dhcp_vendor = vendor_from_client_id(client_id)
             vendor = oui_vendor or dhcp_vendor
+            if not hostname:
+                hostname = _select_best_hostname(
+                    lease.get("host-name"),
+                    lease.get("active-host-name"),
+                    lease.get("comment"),
+                    vendor=vendor,
+                    mac=mac,
+                )
             results.append(
                 {
                     "mac_address": mac,
