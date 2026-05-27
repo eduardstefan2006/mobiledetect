@@ -19,6 +19,27 @@ export const LOCATIONS = {
   '192.168.5.1': { name: 'Grădinița 3', color: '#ec4899' },
 };
 
+const ROUTER_LOCATION_ALIASES = {
+  '192.168.5.10': '192.168.5.1',
+  '192.168.5.11': '192.168.5.1',
+};
+
+const normalizeDeviceLocation = (device) => {
+  const routerIp = device.latest_network?.router_ip;
+  const canonicalRouterIp = ROUTER_LOCATION_ALIASES[routerIp];
+  if (!canonicalRouterIp) {
+    return device;
+  }
+
+  return {
+    ...device,
+    latest_network: {
+      ...device.latest_network,
+      router_ip: canonicalRouterIp,
+    },
+  };
+};
+
 const PAGE_TITLES = {
   dashboard: 'Dashboard',
   devices: 'Dispozitive',
@@ -58,7 +79,7 @@ function App() {
         devicesResponse.ok ? devicesResponse.json() : [],
         alertsResponse.ok ? alertsResponse.json() : [],
       ]);
-      setDevices(toArray(devicesData));
+      setDevices(toArray(devicesData).map(normalizeDeviceLocation));
       setAlerts(toArray(alertsData));
     } catch (error) {
       console.error('Failed to fetch monitoring data', error);

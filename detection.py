@@ -408,6 +408,29 @@ def maybe_randomized_mac(mac_address: str) -> bool:
     return bool(first_octet & 0b10)
 
 
+GENERIC_MOBILE_HOSTNAMES = {
+    "iphone",
+    "ipad",
+    "android",
+    "samsung",
+    "galaxy",
+    "pixel",
+    "oppo",
+    "redmi",
+    "xiaomi",
+    "huawei",
+    "motorola",
+    "moto",
+    "realme",
+    "oneplus",
+}
+
+
+def is_generic_mobile_hostname(hostname: str) -> bool:
+    normalized = re.sub(r"[^a-z0-9]+", "", hostname.lower())
+    return normalized in GENERIC_MOBILE_HOSTNAMES
+
+
 def deduplicate_records(records: list[dict]) -> list[dict]:
     """
     De-duplicate across routers by stable key.
@@ -421,8 +444,10 @@ def deduplicate_records(records: list[dict]) -> list[dict]:
 
         if mac and not maybe_randomized_mac(mac):
             key = f"mac:{mac}"
-        elif hostname:
+        elif hostname and not is_generic_mobile_hostname(hostname):
             key = f"host:{hostname}"
+        elif mac:
+            key = f"mac:{mac}"
         else:
             key = f"fallback:{rec.get('router_ip')}:{rec.get('ip_address')}"
         grouped[key].append(rec)

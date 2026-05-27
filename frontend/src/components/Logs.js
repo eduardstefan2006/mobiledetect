@@ -7,6 +7,8 @@ const ROUTER_LOCATIONS = {
   '192.168.3.1': 'Școala 3',
   '192.168.4.1': 'Școala 4',
   '192.168.5.1': 'Grădinița 3',
+  '192.168.5.10': 'Grădinița 3',
+  '192.168.5.11': 'Grădinița 3',
 };
 
 const FILTERS = [

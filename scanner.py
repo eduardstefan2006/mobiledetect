@@ -69,7 +69,7 @@ def _select_best_hostname(*candidates: Any, vendor: str | None = None, mac: str 
 ROUTERS = [
     r.strip()
     for r in os.getenv(
-        "ROUTER_IPS", "192.168.1.1,192.168.2.1,192.168.3.1,192.168.4.1,192.168.5.1"
+        "ROUTER_IPS", "192.168.1.1,192.168.2.1,192.168.3.1,192.168.4.1,192.168.5.1,192.168.5.10,192.168.5.11"
     ).split(",")
     if r.strip()
 ]
@@ -78,7 +78,7 @@ ROUTERS = [
 # 192.168.2.1 -> Școala 2
 # 192.168.3.1 -> Școala 3
 # 192.168.4.1 -> Școala 4
-# 192.168.5.1 -> Grădinița 3
+# 192.168.5.1 / 192.168.5.10 / 192.168.5.11 -> Grădinița 3
 
 ROUTER_USERNAME = os.getenv("ROUTER_USERNAME", "openclaw")
 ROUTER_PASSWORD = os.getenv("ROUTER_PASSWORD", "")
@@ -105,18 +105,20 @@ class MikroTikScanner:
         arp_rows = api.get_resource("/ip/arp").get()
         pool.disconnect()
 
-        arp_by_mac: dict[str, str] = {}
+        arp_by_mac: dict[str, dict[str, Any]] = {}
         for arp in arp_rows:
             mac = normalize_mac(arp.get("mac-address"))
             ip = arp.get("address")
             if mac and ip:
-                arp_by_mac[mac] = ip
+                arp_by_mac[mac] = arp
 
         results: list[dict[str, Any]] = []
+        leased_macs: set[str] = set()
         for lease in leases:
             mac = normalize_mac(_first_non_empty(lease.get("active-mac-address"), lease.get("mac-address")))
             if not mac:
                 continue
+            leased_macs.add(mac)
             hostname = _select_best_hostname(
                 lease.get("host-name"),
                 lease.get("active-host-name"),
@@ -125,7 +127,8 @@ class MikroTikScanner:
                 mac=mac,
             )
             client_id = _first_non_empty(lease.get("client-id"), lease.get("active-client-id"))
-            ip = _first_non_empty(lease.get("active-address"), lease.get("address")) or arp_by_mac.get(mac)
+            arp_row = arp_by_mac.get(mac, {})
+            ip = _first_non_empty(lease.get("active-address"), lease.get("address")) or arp_row.get("address")
             if not ip:
                 continue
             oui_vendor = vendor_from_oui(mac)
@@ -148,6 +151,20 @@ class MikroTikScanner:
                     "router_ip": router_ip,
                     "vendor": vendor,
                     "client_id": client_id,
+                }
+            )
+        for mac, arp in arp_by_mac.items():
+            if mac in leased_macs:
+                continue
+            results.append(
+                {
+                    "mac_address": mac,
+                    "ip_address": arp["address"],
+                    "hostname": None,
+                    "dhcp_server": arp.get("interface"),
+                    "router_ip": router_ip,
+                    "vendor": vendor_from_oui(mac),
+                    "client_id": None,
                 }
             )
         return results

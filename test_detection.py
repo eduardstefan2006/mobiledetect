@@ -63,6 +63,33 @@ class IsPhoneDeviceTests(unittest.TestCase):
     def test_does_not_detect_phone_from_globally_administered_mac_without_other_signals(self) -> None:
         self.assertFalse(is_phone_device(None, None, "00:11:22:33:44:55"))
 
+    def test_deduplicate_keeps_generic_iphone_hostnames_separate(self) -> None:
+        records = [
+            {
+                "mac_address": "c2:6f:03:d2:39:6e",
+                "ip_address": "192.168.5.4",
+                "hostname": "iPhone",
+                "vendor": None,
+                "router_ip": "192.168.5.1",
+                "dhcp_server": "defconf",
+            },
+            {
+                "mac_address": "26:27:00:8c:04:9a",
+                "ip_address": "192.168.119.7",
+                "hostname": "iPhone",
+                "vendor": None,
+                "router_ip": "192.168.1.1",
+                "dhcp_server": "Gradinita",
+            },
+        ]
+
+        merged = deduplicate_records(records)
+        self.assertEqual(len(merged), 2)
+        self.assertEqual(
+            {row["mac_address"] for row in merged},
+            {"c2:6f:03:d2:39:6e", "26:27:00:8c:04:9a"},
+        )
+
     def test_deduplicate_prefers_record_with_phone_signals(self) -> None:
         records = [
             {
