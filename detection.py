@@ -361,6 +361,8 @@ def vendor_from_client_id(client_id: str | None) -> str | None:
     cid = client_id.lower().strip()
     if "apple" in cid:
         return "Apple"
+    if "iphone" in cid or "ios" in cid:
+        return "Apple"
     if "android" in cid:
         return "Android"
     if "samsung" in cid:
@@ -427,7 +429,18 @@ def deduplicate_records(records: list[dict]) -> list[dict]:
 
     merged: list[dict] = []
     for bucket in grouped.values():
-        primary = bucket[0].copy()
+        def record_score(row: dict) -> tuple[int, int, int, int]:
+            hostname = (row.get("hostname") or "").strip()
+            vendor = (row.get("vendor") or "").strip()
+            mac = row.get("mac_address")
+
+            phone_signal = int(is_phone_device(hostname, vendor, mac))
+            has_vendor = int(bool(vendor))
+            has_hostname = int(bool(hostname))
+            stable_mac = int(bool(mac and not maybe_randomized_mac(mac)))
+            return (phone_signal, has_vendor, has_hostname, stable_mac)
+
+        primary = max(bucket, key=record_score).copy()
         primary["sources"] = [
             {
                 "ip_address": row.get("ip_address"),
